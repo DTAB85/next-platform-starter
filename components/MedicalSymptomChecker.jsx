@@ -1,14 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import symptomModuleMap from '../data/symptomModules'; // double check the path!
+import symptomModuleMap from '../data/symptomModules'; // ✅ Make sure this path is correct
 
 export default function MedicalSymptomChecker() {
   const [answers, setAnswers] = useState({});
   const [currentQuestion, setCurrentQuestion] = useState(0);
 
-  const symptom = 'chest pain'; // example
-  const module = symptomModuleMap[symptom];
+  // Normalize the symptom name to match key in symptomModuleMap
+  const rawSymptom = 'chest pain'; // example symptom selection
+  const normalizedSymptom = rawSymptom
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase()); // → "Chest Pain"
+
+  const module = symptomModuleMap[normalizedSymptom];
   const questions = module?.questions || [];
 
   const handleAnswer = (questionId, answer) => {
@@ -16,7 +22,25 @@ export default function MedicalSymptomChecker() {
     setCurrentQuestion((prev) => prev + 1);
   };
 
-  if (!questions.length) return <div>No module found.</div>;
+  if (!module) {
+    return (
+      <div style={styles.container}>
+        <h3>No module found for: <code>{normalizedSymptom}</code></h3>
+        <p>Available modules:</p>
+        <pre>{JSON.stringify(Object.keys(symptomModuleMap), null, 2)}</pre>
+      </div>
+    );
+  }
+
+  if (currentQuestion >= questions.length) {
+    return (
+      <div style={styles.container}>
+        <h2>Thank you!</h2>
+        <p>You’ve completed all questions.</p>
+        <pre>{JSON.stringify(answers, null, 2)}</pre>
+      </div>
+    );
+  }
 
   const question = questions[currentQuestion];
 
@@ -25,7 +49,11 @@ export default function MedicalSymptomChecker() {
       <h2>{question.text}</h2>
       <div style={styles.options}>
         {question.options.map((opt) => (
-          <button key={opt} onClick={() => handleAnswer(question.id, opt)} style={styles.button}>
+          <button
+            key={opt}
+            onClick={() => handleAnswer(question.id, opt)}
+            style={styles.button}
+          >
             {opt}
           </button>
         ))}
@@ -36,19 +64,29 @@ export default function MedicalSymptomChecker() {
 
 const styles = {
   container: {
-    padding: '20px',
+    padding: '40px 20px',
     maxWidth: '600px',
-    margin: 'auto',
+    margin: '0 auto',
+    textAlign: 'center',
+    fontFamily: 'sans-serif',
+    color: '#fff',
+    background: 'linear-gradient(to bottom, #1c1c3c, #000)',
+    minHeight: '100vh',
   },
   options: {
-    marginTop: '20px',
+    marginTop: '24px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '12px',
   },
   button: {
-    padding: '10px 16px',
+    padding: '12px 20px',
     fontSize: '16px',
+    backgroundColor: '#337ab7',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
     cursor: 'pointer',
+    transition: 'background 0.3s ease',
   },
 };
