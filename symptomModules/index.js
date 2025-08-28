@@ -1,7 +1,15 @@
 import chestPain from './chestPain';
 
-export default {
+// This object maps symptom keys (with underscores) to their respective data modules
+const symptomModules = {
   chest_pain: {
     'chest pain': chestPain['chest pain']
   }
+  // Add other symptoms here as you create them
+  // Example:
+  // headache: {
+  //   'headache': headache['headache']
+  // }
 };
+
+export default symptomModules;
