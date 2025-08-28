@@ -6,47 +6,57 @@ export default {
     'Associated symptoms (dyspnea, diaphoresis, nausea) increase likelihood of serious pathology'
   ],
   questions: [
-    {
-      text: 'When did the chest pain start?',
-      options: ['Suddenly', 'Gradually', 'Not sure']
-    },
-    {
-      text: 'Where is the pain located?',
-      options: ['Left chest', 'Right chest', 'Center of chest', 'Radiates to jaw/arm/back', 'Not sure']
-    },
-    {
-      text: 'What does the pain feel like?',
-      options: ['Crushing', 'Burning', 'Sharp', 'Tearing', 'Pressure', 'Other']
-    },
-    {
-      text: 'How severe is the pain (1–10)?',
-      options: ['1–3 (Mild)', '4–6 (Moderate)', '7–8 (Severe)', '9–10 (Worst possible)', 'Not sure']
-    },
-    {
-      text: 'What were you doing when the pain started?',
-      options: ['Exerting', 'At rest', 'Emotional stress', 'Sleeping', 'Not sure']
-    },
-    {
-      text: 'What makes the pain better or worse?',
-      options: ['Rest helps', 'Nitroglycerin helps', 'Position changes it', 'Deep breathing worsens it', 'Nothing helps']
-    },
-    {
-      text: 'Are you short of breath?',
-      options: ['Yes', 'No']
-    },
-    {
-      text: 'Do you feel nauseous, dizzy, or are you sweating?',
-      options: ['Nauseous', 'Dizzy', 'Sweating', 'None of these']
-    },
-    {
-      text: 'Do you feel like your heart is racing or pounding?',
-      options: ['Yes', 'No']
-    },
-    {
-      text: 'Any pain in your jaw, neck, arms, or back?',
-      options: ['Jaw', 'Neck', 'Arm', 'Back', 'No']
-    }
-  ],
+  {
+    id: 'onset',
+    text: 'When did the chest pain start?',
+    options: ['Suddenly', 'Gradually', 'Not sure']
+  },
+  {
+    id: 'location',
+    text: 'Where is the pain located?',
+    options: ['Left chest', 'Right chest', 'Center of chest', 'Radiates to jaw/arm/back', 'Not sure']
+  },
+  {
+    id: 'character',
+    text: 'What does the pain feel like?',
+    options: ['Crushing', 'Burning', 'Sharp', 'Tearing', 'Pressure', 'Other']
+  },
+  {
+    id: 'severity',
+    text: 'How severe is the pain (1–10)?',
+    options: ['1–3 (Mild)', '4–6 (Moderate)', '7–8 (Severe)', '9–10 (Worst possible)', 'Not sure']
+  },
+  {
+    id: 'onsetContext',
+    text: 'What were you doing when the pain started?',
+    options: ['Exerting', 'At rest', 'Emotional stress', 'Sleeping', 'Not sure']
+  },
+  {
+    id: 'modifyingFactors',
+    text: 'What makes the pain better or worse?',
+    options: ['Rest helps', 'Nitroglycerin helps', 'Position changes it', 'Deep breathing worsens it', 'Nothing helps']
+  },
+  {
+    id: 'dyspnea',
+    text: 'Are you short of breath?',
+    options: ['Yes', 'No']
+  },
+  {
+    id: 'associatedSymptoms',
+    text: 'Do you feel nauseous, dizzy, or are you sweating?',
+    options: ['Nauseous', 'Dizzy', 'Sweating', 'None of these']
+  },
+  {
+    id: 'palpitations',
+    text: 'Do you feel like your heart is racing or pounding?',
+    options: ['Yes', 'No']
+  },
+  {
+    id: 'radiation',
+    text: 'Any pain in your jaw, neck, arms, or back?',
+    options: ['Jaw', 'Neck', 'Arm', 'Back', 'No']
+  }
+],
   redFlags: [
     'Sudden severe "tearing" pain radiating to back (aortic dissection)',
     'Chest pain with severe dyspnea and hypoxia (PE, tension pneumothorax)',
