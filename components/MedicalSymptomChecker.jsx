@@ -1,71 +1,49 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { questionsForSymptom } from '../data/symptomTrees';
-import diagnosisEngine from '../utils/diagnosisEngine';
-import ResultCard from './ResultCard';
+import React, { useState } from 'react';
 
-export default function MedicalSymptomChecker({ selectedSymptom }) {
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [diagnosis, setDiagnosis] = useState(null);
+const symptoms = [
+  { id: 'chest_pain', label: 'Chest Pain' },
+  { id: 'cough', label: 'Cough' },
+  { id: 'headache', label: 'Headache' },
+  { id: 'abdominal_pain', label: 'Abdominal Pain' },
+  { id: 'fever', label: 'Fever' },
+];
 
-  useEffect(() => {
-    if (selectedSymptom) {
-      const qList = questionsForSymptom(selectedSymptom);
-      setQuestions(qList);
-      setAnswers({});
-      setCurrentQuestionIndex(0);
-      setDiagnosis(null);
-    }
-  }, [selectedSymptom]);
+export default function MedicalSymptomChecker() {
+  const [selectedSymptom, setSelectedSymptom] = useState(null);
 
-  const handleAnswer = (value) => {
-    const currentQuestion = questions[currentQuestionIndex];
-    const updatedAnswers = { ...answers, [currentQuestion.id]: value };
-    setAnswers(updatedAnswers);
-
-    // Run diagnosis if enough data
-    if (currentQuestionIndex >= questions.length - 1) {
-      const results = diagnosisEngine(updatedAnswers, selectedSymptom);
-      setDiagnosis(results);
-    } else {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
+  const handleSymptomClick = (symptom) => {
+    setSelectedSymptom(symptom);
   };
 
-  if (!selectedSymptom) {
-    return <p className="text-gray-500">Please select a symptom to begin.</p>;
-  }
-
-  if (diagnosis) {
-    return (
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-center">Possible Diagnoses</h2>
-        {diagnosis.map((d, i) => (
-          <ResultCard key={i} condition={d.condition} score={d.score} />
-        ))}
-      </div>
-    );
-  }
-
-  const currentQuestion = questions[currentQuestionIndex];
-
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-medium">{currentQuestion.text}</h2>
-      <div className="grid gap-3">
-        {currentQuestion.options.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => handleAnswer(option.value)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-indigo-900 to-black text-white p-8">
+      <h1 className="text-3xl font-bold mb-6">AI Symptom Checker</h1>
+
+      {!selectedSymptom && (
+        <>
+          <p className="text-gray-400 mb-4">Please select a symptom to begin:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {symptoms.map((symptom) => (
+              <button
+                key={symptom.id}
+                onClick={() => handleSymptomClick(symptom.id)}
+                className="bg-indigo-700 hover:bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md"
+              >
+                {symptom.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {selectedSymptom && (
+        <div className="mt-10">
+          <p className="text-xl">You selected: <strong>{selectedSymptom}</strong></p>
+          {/* You can render dynamic questions here based on selectedSymptom */}
+        </div>
+      )}
     </div>
   );
 }
