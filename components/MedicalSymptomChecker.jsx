@@ -1,80 +1,68 @@
-// MedicalSymptomChecker.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { questionsForSymptom } from '../data/symptomTrees'; // dynamic question trees per symptom
-import diagnosisEngine from '../utils/diagnosisEngine'; // new AI-like scoring logic
+import { questionsForSymptom } from '../data/symptomTrees';
+import diagnosisEngine from '../utils/diagnosisEngine';
 import ResultCard from './ResultCard';
 
-export default function MedicalSymptomChecker({ selectedSymptoms }) {
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [currentSymptom, setCurrentSymptom] = useState(selectedSymptoms[0]);
-  const [userAnswers, setUserAnswers] = useState({});
-  const [questionQueue, setQuestionQueue] = useState([]);
-  const [results, setResults] = useState(null);
+export default function MedicalSymptomChecker({ selectedSymptom }) {
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [diagnosis, setDiagnosis] = useState(null);
 
   useEffect(() => {
-    if (currentSymptom) {
-      const questions = questionsForSymptom(currentSymptom);
-      setQuestionQueue(questions);
+    if (selectedSymptom) {
+      const qList = questionsForSymptom(selectedSymptom);
+      setQuestions(qList);
+      setAnswers({});
+      setCurrentQuestionIndex(0);
+      setDiagnosis(null);
     }
-  }, [currentSymptom]);
+  }, [selectedSymptom]);
 
-  const handleAnswer = (answerObj) => {
-    const updatedAnswers = { ...userAnswers };
-    const { id, answer } = answerObj;
-    updatedAnswers[id] = answer;
-    setUserAnswers(updatedAnswers);
+  const handleAnswer = (value) => {
+    const currentQuestion = questions[currentQuestionIndex];
+    const updatedAnswers = { ...answers, [currentQuestion.id]: value };
+    setAnswers(updatedAnswers);
 
-    const nextQuestions = questionQueue.slice(1);
-
-    // If no more questions OR confident result, trigger diagnosis
-    if (nextQuestions.length === 0 || shouldFinishEarly(updatedAnswers)) {
-      const diagnosisResults = diagnosisEngine(updatedAnswers, currentSymptom);
-      setResults(diagnosisResults);
+    // Run diagnosis if enough data
+    if (currentQuestionIndex >= questions.length - 1) {
+      const results = diagnosisEngine(updatedAnswers, selectedSymptom);
+      setDiagnosis(results);
     } else {
-      setQuestionQueue(nextQuestions);
-      setQuestionIndex((prev) => prev + 1);
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
 
-  const shouldFinishEarly = (answers) => {
-    const scores = diagnosisEngine(answers, currentSymptom);
-    const topTwo = scores.slice(0, 2);
-    const confidenceGap = topTwo[0].score - topTwo[1].score;
-    return confidenceGap > 30 && scores[0].score > 60;
-  };
+  if (!selectedSymptom) {
+    return <p className="text-gray-500">Please select a symptom to begin.</p>;
+  }
 
-  if (results) {
+  if (diagnosis) {
     return (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Top Diagnosis Matches</h2>
-        {results.map((res, idx) => (
-          <ResultCard key={idx} result={res} />
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-center">Possible Diagnoses</h2>
+        {diagnosis.map((d, i) => (
+          <ResultCard key={i} condition={d.condition} score={d.score} />
         ))}
       </div>
     );
   }
 
-  if (questionQueue.length === 0) {
-    return <div className="p-6 text-lg">Loading questions for {currentSymptom}...</div>;
-  }
-
-  const currentQuestion = questionQueue[0];
+  const currentQuestion = questions[currentQuestionIndex];
 
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-semibold mb-2">{currentQuestion.text}</h2>
-      <div className="space-y-2">
-        {currentQuestion.options.map((opt, i) => (
+    <div className="space-y-6">
+      <h2 className="text-xl font-medium">{currentQuestion.text}</h2>
+      <div className="grid gap-3">
+        {currentQuestion.options.map((option) => (
           <button
-            key={i}
-            onClick={() =>
-              handleAnswer({ id: currentQuestion.id, answer: opt.value })
-            }
-            className="bg-blue-600 text-white px-4 py-2 rounded w-full hover:bg-blue-700"
+            key={option.value}
+            onClick={() => handleAnswer(option.value)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
-            {opt.label}
+            {option.label}
           </button>
         ))}
       </div>
