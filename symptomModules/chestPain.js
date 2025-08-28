@@ -5,24 +5,47 @@ export default {
     'Cardiac risk factors significantly influence probability of ACS',
     'Associated symptoms (dyspnea, diaphoresis, nausea) increase likelihood of serious pathology'
   ],
-  questions: [
-    'When did the chest pain start and how did it begin (sudden vs gradual)?',
-    'Where exactly is the pain located and does it radiate anywhere?',
-    'What does the pain feel like (crushing, burning, sharp, tearing, pressure)?',
-    'How severe is the pain on a scale of 1-10?',
-    'What were you doing when the pain started (exertion, rest, emotional stress)?',
-    'Does anything make the pain better or worse (rest, nitroglycerin, position, deep breathing)?',
-    'Are you short of breath or having trouble breathing?',
-    'Do you feel nauseous, dizzy, or are you sweating?',
-    'Do you feel like your heart is racing or pounding?',
-    'Any pain in your jaw, neck, arms, or back?',
-    'Have you had chest pain like this before?',
-    'Do you have high blood pressure, diabetes, or high cholesterol?',
-    'Do you smoke or have you ever smoked?',
-    'Any family history of heart attacks or heart disease?',
-    'Are you taking any medications, especially for heart conditions?',
-    'Any recent long travel, surgery, or prolonged immobilization?',
-    'Any recent cough, fever, or leg swelling?'
+ questions: [
+{
+text: 'When did the chest pain start?',
+options: ['Suddenly', 'Gradually', 'Not sure']
+},
+{
+text: 'Where is the pain located?',
+options: ['Left chest', 'Right chest', 'Center of chest', 'Radiates to jaw/arm/back', 'Not sure']
+},
+{
+text: 'What does the pain feel like?',
+options: ['Crushing', 'Burning', 'Sharp', 'Tearing', 'Pressure', 'Other']
+},
+{
+text: 'How severe is the pain (1–10)?',
+options: ['1–3 (Mild)', '4–6 (Moderate)', '7–8 (Severe)', '9–10 (Worst possible)', 'Not sure']
+},
+{
+text: 'What were you doing when the pain started?',
+options: ['Exerting', 'At rest', 'Emotional stress', 'Sleeping', 'Not sure']
+},
+{
+text: 'What makes the pain better or worse?',
+options: ['Rest helps', 'Nitroglycerin helps', 'Position changes it', 'Deep breathing worsens it', 'Nothing helps']
+},
+{
+text: 'Are you short of breath?',
+options: ['Yes', 'No']
+},
+{
+text: 'Do you feel nauseous, dizzy, or are you sweating?',
+options: ['Nauseous', 'Dizzy', 'Sweating', 'None of these']
+},
+{
+text: 'Do you feel like your heart is racing or pounding?',
+options: ['Yes', 'No']
+},
+{
+text: 'Any pain in your jaw, neck, arms, or back?',
+options: ['Jaw', 'Neck', 'Arm', 'Back', 'No']
+}
   ],
   redFlags: [
     'Sudden severe "tearing" pain radiating to back (aortic dissection)',
