@@ -1,3 +1,5 @@
+// Updated MedicalSymptomChecker.jsx with tappable multi-choice UX
+
 'use client';
 
 import React, { useState } from 'react';
@@ -10,81 +12,41 @@ const symptoms = [
 export default function MedicalSymptomChecker() {
   const [selectedSymptom, setSelectedSymptom] = useState(null);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState([]);
+  const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
 
-  const handleSymptomClick = (symptomId) => {
-    setSelectedSymptom(symptomId);
+  const module = selectedSymptom ? symptomModules[selectedSymptom] : null;
+  const currentQuestion = module?.questions[questionIndex];
+
+  const handleSymptomClick = (symptom) => {
+    setSelectedSymptom(symptom);
     setQuestionIndex(0);
-    setAnswers([]);
+    setAnswers({});
     setShowResults(false);
   };
 
-  const handleAnswer = (answer) => {
-    setAnswers((prev) => [...prev, answer]);
-    const totalQuestions = symptomModules[selectedSymptom]?.questions?.length || 0;
-    if (questionIndex + 1 < totalQuestions) {
-      setQuestionIndex(questionIndex + 1);
+  const handleAnswerSelect = (value) => {
+    setAnswers((prev) => ({ ...prev, [questionIndex]: value }));
+    if (questionIndex + 1 < module.questions.length) {
+      setQuestionIndex((prev) => prev + 1);
     } else {
       setShowResults(true);
     }
   };
 
-  const renderQuestion = () => {
-    const module = symptomModules[selectedSymptom];
-    const question = module?.questions?.[questionIndex];
-
-    if (!question) return <p>No questions available for this symptom.</p>;
-
+  const renderChoices = () => {
+    const choices = module.questions[questionIndex]?.choices || ['Yes', 'No'];
     return (
-      <div>
-        <p className="text-xl mb-4">{question}</p>
-        <div className="space-x-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+        {choices.map((choice, idx) => (
           <button
-            onClick={() => handleAnswer('Yes')}
-            className="bg-green-600 hover:bg-green-500 text-white py-2 px-4 rounded"
+            key={idx}
+            onClick={() => handleAnswerSelect(choice)}
+            className="bg-purple-700 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg shadow"
           >
-            Yes
+            {choice}
           </button>
-          <button
-            onClick={() => handleAnswer('No')}
-            className="bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded"
-          >
-            No
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderResults = () => {
-    const module = symptomModules[selectedSymptom];
-    if (!module) return <p>No module data found.</p>;
-
-    return (
-      <div>
-        <h2 className="text-2xl font-bold mb-4">AI Diagnostic Insights</h2>
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold">Red Flags:</h3>
-          <ul className="list-disc ml-5">
-            {module.redFlags?.map((flag, idx) => (
-              <li key={idx}>{flag}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold">Top Differentials:</h3>
-          {Object.entries(module.differentials || {}).map(([category, items]) => (
-            <div key={category} className="mb-3">
-              <p className="font-medium text-purple-400">{category}:</p>
-              <ul className="list-disc ml-5">
-                {items.map((item, i) => (
-                  <li key={i}><strong>{item.condition}</strong>: {item.features}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
     );
   };
@@ -95,7 +57,7 @@ export default function MedicalSymptomChecker() {
 
       {!selectedSymptom && (
         <>
-          <p className="text-gray-300 mb-4">Please select a symptom to begin:</p>
+          <p className="text-gray-400 mb-4">Please select a symptom to begin:</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {symptoms.map((symptom) => (
               <button
@@ -112,12 +74,20 @@ export default function MedicalSymptomChecker() {
 
       {selectedSymptom && !showResults && (
         <div className="mt-10">
-          {renderQuestion()}
+          <p className="text-xl mb-4">{currentQuestion?.text || 'Loading question...'}</p>
+          {renderChoices()}
         </div>
       )}
 
-      {selectedSymptom && showResults && (
-        <div className="mt-10">{renderResults()}</div>
+      {showResults && (
+        <div className="mt-10">
+          <h2 className="text-2xl font-bold mb-4">Preliminary Summary</h2>
+          <ul className="list-disc ml-6 space-y-2">
+            {Object.entries(answers).map(([index, value]) => (
+              <li key={index}><strong>Q{+index + 1}:</strong> {value}</li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
