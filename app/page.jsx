@@ -1,6 +1,31 @@
-import React from 'react';
-import MedicalSymptomChecker from '../components/MedicalSymptomChecker';
+'use client';
 
-export default function Home() {
-  return <MedicalSymptomChecker />;
+import React from 'react';
+import Link from 'next/link';
+import styles from '../styles/Home.module.css';
+
+export default function HomePage() {
+  return (
+    <main className={styles.container}>
+      <h1 className={styles.title}>Your AI Health Assistant</h1>
+      <p className={styles.subtitle}>A modern, powerful alternative to WebMD.</p>
+
+      <div className={styles.grid}>
+        <FeatureCard title="🧠 Symptom Checker" href="/symptom-checker" />
+        <FeatureCard title="🧪 Lab Test Interpreter" href="/lab-interpreter" />
+        <FeatureCard title="📋 Condition Database" href="/conditions" />
+        <FeatureCard title="💊 Drug Interactions" href="/drug-interactions" />
+        <FeatureCard title="📅 Medication Reminders" href="/medication-reminders" />
+        <FeatureCard title="📝 Symptom Journal" href="/symptom-journal" />
+      </div>
+    </main>
+  );
+}
+
+function FeatureCard({ title, href }) {
+  return (
+    <Link href={href} className={styles.card}>
+      <div>{title}</div>
+    </Link>
+  );
 }
