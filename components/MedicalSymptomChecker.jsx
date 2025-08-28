@@ -6,38 +6,43 @@ import symptomModuleMap from '../data/symptomModules'; // ✅ Make sure this pat
 export default function MedicalSymptomChecker() {
   const [answers, setAnswers] = useState({});
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [results, setResults] = useState(null);
 
-  // Normalize the symptom name to match key in symptomModuleMap
-  const rawSymptom = 'chest pain'; // example symptom selection
-  const normalizedSymptom = rawSymptom
-    .trim()
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase()); // → "Chest Pain"
-
-  const module = symptomModuleMap[normalizedSymptom];
+  const symptom = 'chest pain'; // 🔧 You can make this dynamic later
+  const module = symptomModuleMap[symptom];
   const questions = module?.questions || [];
 
   const handleAnswer = (questionId, answer) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
-    setCurrentQuestion((prev) => prev + 1);
+    const updatedAnswers = { ...answers, [questionId]: answer };
+    setAnswers(updatedAnswers);
+
+    const nextQuestion = currentQuestion + 1;
+    if (nextQuestion >= questions.length) {
+      // All done – run diagnosis logic
+      const diagnoses = getSuggestedDiagnoses(updatedAnswers, module);
+      setResults(diagnoses);
+    } else {
+      setCurrentQuestion(nextQuestion);
+    }
   };
 
-  if (!module) {
-    return (
-      <div style={styles.container}>
-        <h3>No module found for: <code>{normalizedSymptom}</code></h3>
-        <p>Available modules:</p>
-        <pre>{JSON.stringify(Object.keys(symptomModuleMap), null, 2)}</pre>
-      </div>
-    );
-  }
+  if (!module || !questions.length) return <div>No module found.</div>;
 
-  if (currentQuestion >= questions.length) {
+  if (results) {
     return (
       <div style={styles.container}>
-        <h2>Thank you!</h2>
-        <p>You’ve completed all questions.</p>
-        <pre>{JSON.stringify(answers, null, 2)}</pre>
+        <h2>Possible Conditions</h2>
+        {results.length > 0 ? (
+          <ul>
+            {results.map((item, index) => (
+              <li key={index}>
+                <strong>{item.condition}</strong>: <em>{item.features}</em>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No matching conditions based on answers.</p>
+        )}
       </div>
     );
   }
@@ -49,11 +54,7 @@ export default function MedicalSymptomChecker() {
       <h2>{question.text}</h2>
       <div style={styles.options}>
         {question.options.map((opt) => (
-          <button
-            key={opt}
-            onClick={() => handleAnswer(question.id, opt)}
-            style={styles.button}
-          >
+          <button key={opt} onClick={() => handleAnswer(question.id, opt)} style={styles.button}>
             {opt}
           </button>
         ))}
@@ -62,31 +63,38 @@ export default function MedicalSymptomChecker() {
   );
 }
 
+function getSuggestedDiagnoses(answers, module) {
+  const differentials = module?.differentials || {};
+  const flatConditions = Object.entries(differentials).flatMap(([category, items]) =>
+    items.map((item) => ({ ...item, category }))
+  );
+
+  const keywords = Object.values(answers).flat().join(" ").toLowerCase();
+
+  // Simple matching: return items whose `features` or `condition` contain any keyword
+  const matches = flatConditions.filter((item) => {
+    const haystack = `${item.condition} ${item.features}`.toLowerCase();
+    return keywords.split(" ").some((kw) => haystack.includes(kw));
+  });
+
+  return matches.slice(0, 5); // Top 5 suggestions
+}
+
 const styles = {
   container: {
-    padding: '40px 20px',
+    padding: '20px',
     maxWidth: '600px',
-    margin: '0 auto',
-    textAlign: 'center',
-    fontFamily: 'sans-serif',
-    color: '#fff',
-    background: 'linear-gradient(to bottom, #1c1c3c, #000)',
-    minHeight: '100vh',
+    margin: 'auto',
   },
   options: {
-    marginTop: '24px',
+    marginTop: '20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '10px',
   },
   button: {
-    padding: '12px 20px',
+    padding: '10px 16px',
     fontSize: '16px',
-    backgroundColor: '#337ab7',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
     cursor: 'pointer',
-    transition: 'background 0.3s ease',
   },
 };
