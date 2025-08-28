@@ -8,7 +8,7 @@ export default function MedicalSymptomChecker() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [results, setResults] = useState(null);
 
-  const symptom = 'chest pain'; // 🔧 You can make this dynamic later
+  const symptom = 'Chest Pain'; // 🔧 You can make this dynamic later
   const module = symptomModuleMap[symptom];
   const questions = module?.questions || [];
 
