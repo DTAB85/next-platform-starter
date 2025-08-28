@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import symptomModules from '../symptomModules'; // Make sure path is correct
+import symptomModules from '../symptomModules'; 
 
 const symptoms = [
   { id: 'chest_pain', label: 'Chest Pain' },
