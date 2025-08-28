@@ -7,8 +7,7 @@ import styles from '../styles/Home.module.css';
 export default function HomePage() {
   return (
     <main className={styles.container}>
-      <h1 className={styles.title}>Your AI Health Assistant</h1>
-      <p className={styles.subtitle}>A modern, powerful alternative to WebMD.</p>
+      <h1 className={styles.title}>AI Doc</h1>
 
       <div className={styles.grid}>
         <FeatureCard title="🧠 Symptom Checker" href="/symptom-checker" />
