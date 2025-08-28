@@ -1,4 +1,4 @@
-import chestpain from './chestpain';
+import chestpain from '../symptomModules/chestpain';
 
 const symptomModuleMap = {
   'Chest Pain': chestpain
