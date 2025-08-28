@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import symptomModuleMap from '../data/symptomModules';
 
 export default function MedicalSymptomChecker() {
@@ -42,7 +42,7 @@ export default function MedicalSymptomChecker() {
     });
     setMatchedRedFlags(flagged);
 
-    // 🟡 RISK STRATIFICATION MATCH
+    // 🟡 RISK STRATIFICATION
     const strat = module.riskStratification;
     const riskLevels = Object.keys(strat);
 
@@ -66,7 +66,6 @@ export default function MedicalSymptomChecker() {
 
   if (!questions.length) return <div>No module found.</div>;
 
-  // 🎯 Show final results
   if (showResults) {
     return (
       <div style={styles.container}>
@@ -90,6 +89,19 @@ export default function MedicalSymptomChecker() {
         <h3>Risk Assessment:</h3>
         <p><strong>{riskCategory}</strong></p>
 
+        <h3>Follow-Up Recommendation:</h3>
+        <p style={{ fontWeight: 'bold', color: '#444' }}>
+          {matchedRedFlags.length > 0
+            ? 'Go to the emergency room immediately.'
+            : riskCategory?.includes('Very High') || riskCategory?.includes('High')
+            ? 'Contact your doctor as soon as possible. You may need urgent evaluation.'
+            : riskCategory?.includes('Moderate')
+            ? 'See your doctor soon for further testing and guidance.'
+            : riskCategory?.includes('Low')
+            ? 'Monitor your symptoms at home. Follow up with a provider if they worsen or persist.'
+            : 'Not enough data to make a confident recommendation.'}
+        </p>
+
         <h3>Your Answers:</h3>
         <ul>
           {Object.entries(answers).map(([key, value]) => (
@@ -100,7 +112,7 @@ export default function MedicalSymptomChecker() {
     );
   }
 
-  // 🤖 Ask questions
+  // ➡️ Question Display
   const question = questions[currentQuestion];
 
   return (
@@ -108,7 +120,11 @@ export default function MedicalSymptomChecker() {
       <h2>{question.text}</h2>
       <div style={styles.options}>
         {question.options.map((opt) => (
-          <button key={opt} onClick={() => handleAnswer(question.id, opt)} style={styles.button}>
+          <button
+            key={opt}
+            onClick={() => handleAnswer(question.id, opt)}
+            style={styles.button}
+          >
             {opt}
           </button>
         ))}
