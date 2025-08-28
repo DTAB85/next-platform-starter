@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import {
   ChevronRight, User, Clock, AlertTriangle, CheckCircle, Heart,
