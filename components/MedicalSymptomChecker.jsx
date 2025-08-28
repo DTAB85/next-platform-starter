@@ -1,33 +1,112 @@
 'use client';
 
 import React, { useState } from 'react';
-import symptomModules from '../symptomModules'; 
-
-const symptoms = [
-  { id: 'chest_pain', label: 'Chest Pain' },
-  { id: 'cough', label: 'Cough' },
-  { id: 'headache', label: 'Headache' },
-  { id: 'abdominal_pain', label: 'Abdominal Pain' },
-  { id: 'fever', label: 'Fever' },
-];
+import symptomModules from '../symptomModules';
 
 export default function MedicalSymptomChecker() {
+  const symptoms = [
+    { id: 'chest_pain', label: 'Chest Pain' },
+    // Add more symptoms here later
+  ];
+
   const [selectedSymptom, setSelectedSymptom] = useState(null);
+  const [answers, setAnswers] = useState({});
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [showResults, setShowResults] = useState(false);
 
-  const handleSymptomClick = (symptomId) => {
-    setSelectedSymptom(symptomId);
+  const module = selectedSymptom ? symptomModules[selectedSymptom]?.[selectedSymptom.replace(/_/g, ' ')] : null;
+
+  const handleSymptomClick = (id) => {
+    setSelectedSymptom(id);
+    setAnswers({});
     setQuestionIndex(0);
+    setShowResults(false);
   };
 
-  // Normalize selected symptom key to match symptomModules keys (e.g., "chest_pain" → "chest pain")
-  const normalizedSymptom = selectedSymptom ? selectedSymptom.replace(/_/g, ' ') : null;
-  const symptomModule = normalizedSymptom ? symptomModules[normalizedSymptom] : null;
-  const questions = symptomModule?.questions || [];
-
-  const handleNextQuestion = () => {
-    setQuestionIndex((prev) => Math.min(prev + 1, questions.length - 1));
+  const handleAnswer = (answer) => {
+    setAnswers((prev) => ({ ...prev, [questionIndex]: answer }));
+    if (questionIndex + 1 < module.questions.length) {
+      setQuestionIndex(questionIndex + 1);
+    } else {
+      setShowResults(true);
+    }
   };
+
+  const renderResults = () => (
+    <div className="mt-10 space-y-8">
+      <h2 className="text-2xl font-bold">Preliminary Clinical Summary</h2>
+
+      <section>
+        <h3 className="text-xl font-semibold mb-1">Pivotal Clinical Points</h3>
+        <ul className="list-disc list-inside text-gray-300">
+          {module.pivotalPoints.map((point, i) => (
+            <li key={i}>{point}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="text-xl font-semibold mb-1">Red Flags to Consider</h3>
+        <ul className="list-disc list-inside text-red-300">
+          {module.redFlags.map((flag, i) => (
+            <li key={i}>{flag}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="text-xl font-semibold mb-1">Risk Stratification (ACS)</h3>
+        {Object.entries(module.riskStratification).map(([level, items]) => (
+          <div key={level} className="mb-2">
+            <strong className="text-indigo-300">{level}:</strong>
+            <ul className="list-disc list-inside ml-4">
+              {items.map((item, i) => <li key={i}>{item}</li>)}
+            </ul>
+          </div>
+        ))}
+      </section>
+
+      <section>
+        <h3 className="text-xl font-semibold mb-1">Age/Gender Risk Modifiers</h3>
+        {Object.entries(module.ageGenderFactors).map(([group, items]) => (
+          <div key={group} className="mb-2">
+            <strong className="text-indigo-300">{group}:</strong>
+            <ul className="list-disc list-inside ml-4">
+              {items.map((item, i) => <li key={i}>{item}</li>)}
+            </ul>
+          </div>
+        ))}
+      </section>
+
+      <section>
+        <h3 className="text-xl font-semibold mb-1">Differential Diagnoses</h3>
+        {Object.entries(module.differentials).map(([group, items]) => (
+          <div key={group} className="mb-4">
+            <strong className="text-indigo-300">{group}:</strong>
+            <ul className="list-disc list-inside ml-4">
+              {items.map((dx, i) => (
+                <li key={i}>
+                  <span className="text-white font-semibold">{dx.condition}</span>: <em>{dx.features}</em>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+
+      <section>
+        <h3 className="text-xl font-semibold mb-1">Diagnostic Criteria</h3>
+        {Object.entries(module.diagnosticCriteria).map(([label, criteria]) => (
+          <div key={label} className="mb-2">
+            <strong className="text-indigo-300">{label}:</strong>
+            <ul className="list-disc list-inside ml-4">
+              {criteria.map((c, i) => <li key={i}>{c}</li>)}
+            </ul>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-900 to-black text-white p-8">
@@ -50,33 +129,27 @@ export default function MedicalSymptomChecker() {
         </>
       )}
 
-      {selectedSymptom && (
-        <div className="mt-10 space-y-6">
-          <p className="text-xl">You selected: <strong>{normalizedSymptom}</strong></p>
-
-          {questions.length > 0 ? (
-            <div className="bg-indigo-800 p-6 rounded-lg shadow-md">
-              <p className="text-lg mb-4">
-                Question {questionIndex + 1} of {questions.length}
-              </p>
-              <p className="text-2xl font-medium mb-4">{questions[questionIndex]}</p>
-              {questionIndex < questions.length - 1 && (
-                <button
-                  onClick={handleNextQuestion}
-                  className="mt-4 bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-lg text-white font-semibold"
-                >
-                  Next
-                </button>
-              )}
-              {questionIndex === questions.length - 1 && (
-                <p className="text-green-400 mt-6">End of questions.</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-red-400">No questions found for this symptom.</p>
-          )}
+      {selectedSymptom && !showResults && (
+        <div className="mt-10">
+          <p className="text-xl mb-4">Q{questionIndex + 1}: {module.questions[questionIndex]}</p>
+          <div className="flex space-x-4">
+            <button
+              className="bg-green-600 hover:bg-green-500 px-4 py-2 rounded shadow"
+              onClick={() => handleAnswer('Yes')}
+            >
+              Yes
+            </button>
+            <button
+              className="bg-red-600 hover:bg-red-500 px-4 py-2 rounded shadow"
+              onClick={() => handleAnswer('No')}
+            >
+              No
+            </button>
+          </div>
         </div>
       )}
+
+      {selectedSymptom && showResults && renderResults()}
     </div>
   );
 }
