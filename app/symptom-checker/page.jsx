@@ -1,24 +1,21 @@
 'use client';
 
-
 import React from 'react';
 import Navbar from '../../components/Navbar';
 import MedicalSymptomChecker from '../../components/MedicalSymptomChecker';
 
-
 export default function SymptomCheckerPage() {
-return (
-<>
-<Navbar />
-<div className="mt-8 px-4">
-<h1 className="text-3xl font-bold text-center text-indigo-700 mb-6">
-🧠 Symptom Checker
-</h1>
-<MedicalSymptomChecker />
-</div>
-</>
-);
+  return (
+    <>
+      <Navbar />
+      <main style={{ padding: '20px', maxWidth: '600px', margin: 'auto' }}>
+        <h1>Symptom Checker</h1>
+        <MedicalSymptomChecker />
+      </main>
+    </>
+  );
 }
+
 // Enhanced symptom modules with more comprehensive data
 const symptomModuleMap = {
   'Chest Pain': {
