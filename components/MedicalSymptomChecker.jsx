@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import chestpain from '../symptomModules/chestpain';
+import chestpain from '../symptomModules/chestpain.js';
 
 const symptoms = [
   { id: 'chestpain', label: 'Chest Pain', module: chestpain }
