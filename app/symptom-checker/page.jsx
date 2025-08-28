@@ -1,8 +1,24 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, ChevronRight, ChevronLeft, Activity, Clock, User, AlertTriangle, CheckCircle, Info, Phone, Calendar, FileText, Heart, ChevronUp, Edit2, Stethoscope } from 'lucide-react';
 
+import React from 'react';
+import Navbar from '../../components/Navbar';
+import MedicalSymptomChecker from '../../components/MedicalSymptomChecker';
+
+
+export default function SymptomCheckerPage() {
+return (
+<>
+<Navbar />
+<div className="mt-8 px-4">
+<h1 className="text-3xl font-bold text-center text-indigo-700 mb-6">
+🧠 Symptom Checker
+</h1>
+<MedicalSymptomChecker />
+</div>
+</>
+);
+}
 // Enhanced symptom modules with more comprehensive data
 const symptomModuleMap = {
   'Chest Pain': {
