@@ -9,6 +9,7 @@ export default function MedicalSymptomChecker() {
   const [showResults, setShowResults] = useState(false);
   const [matchedRedFlags, setMatchedRedFlags] = useState([]);
   const [riskCategory, setRiskCategory] = useState(null);
+  const [conditionMatches, setConditionMatches] = useState([]);
 
   const symptom = 'Chest Pain';
   const module = symptomModuleMap[symptom];
@@ -56,12 +57,40 @@ export default function MedicalSymptomChecker() {
           (phrase.includes('young') && userAnswers.age && parseInt(userAnswers.age) < 30)
         ) {
           setRiskCategory(level);
-          return;
+          break;
         }
       }
     }
 
-    setRiskCategory('Unclear Risk Profile');
+    if (!riskCategory) setRiskCategory('Unclear Risk Profile');
+
+    // 🧠 CONDITION MATCHING
+    const scoredMatches = [];
+    const lowerAnswers = Object.values(userAnswers).join(' ').toLowerCase();
+
+    for (let category in module.differentials) {
+      module.differentials[category].forEach((cond) => {
+        let score = 0;
+        const features = cond.features.toLowerCase();
+
+        features.split(/[,\.]/).forEach((feature) => {
+          if (lowerAnswers.includes(feature.trim())) score += 1;
+        });
+
+        if (score > 0) {
+          scoredMatches.push({
+            condition: cond.condition,
+            category,
+            features: cond.features,
+            score,
+          });
+        }
+      });
+    }
+
+    // Sort by descending score
+    scoredMatches.sort((a, b) => b.score - a.score);
+    setConditionMatches(scoredMatches);
   };
 
   if (!questions.length) return <div>No module found.</div>;
@@ -102,6 +131,20 @@ export default function MedicalSymptomChecker() {
             : 'Not enough data to make a confident recommendation.'}
         </p>
 
+        <h3>Most Likely Conditions:</h3>
+        {conditionMatches.length > 0 ? (
+          <ul>
+            {conditionMatches.map((match, idx) => (
+              <li key={idx}>
+                <strong>{match.condition}</strong> ({match.category})<br />
+                <em>{match.features}</em> — <strong>Match Score: {match.score}</strong>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No specific condition matches found based on current answers.</p>
+        )}
+
         <h3>Your Answers:</h3>
         <ul>
           {Object.entries(answers).map(([key, value]) => (
@@ -112,7 +155,6 @@ export default function MedicalSymptomChecker() {
     );
   }
 
-  // ➡️ Question Display
   const question = questions[currentQuestion];
 
   return (
@@ -136,7 +178,7 @@ export default function MedicalSymptomChecker() {
 const styles = {
   container: {
     padding: '20px',
-    maxWidth: '600px',
+    maxWidth: '700px',
     margin: 'auto',
   },
   options: {
