@@ -1,919 +1,712 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, ChevronRight, ChevronLeft, Activity, Clock, User, AlertTriangle, CheckCircle, Info, Phone, Calendar, FileText, Heart, ChevronUp, Edit2, Stethoscope } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { 
+    AlertCircle, Activity, Clock, User, AlertTriangle, CheckCircle, Info, Phone, Calendar, 
+    FileText, Heart, ChevronUp, Edit2, Stethoscope, Wind, Sun, UserCheck, BarChart2, BrainCircuit, ShieldCheck,
+    ChevronRight, ChevronLeft, Droplet, Thermometer, Bone, Smile, Circle, Zap, Target
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Enhanced symptom modules with more comprehensive data
-const symptomModuleMap = {
-  'Chest Pain': {
+// --- DATA STRUCTURES (EXPANDED) ---
+// Expanded to include multiple conditions, lifestyle factors, and new data points for advanced analysis.
+
+const lifestyleQuestions = [
+    { id: 'diet', text: 'How would you describe your diet?', type: 'single', options: ['Healthy/Balanced', 'Average', 'Unhealthy/Processed'], risk: { 'Unhealthy/Processed': 2 } },
+    { id: 'exercise', text: 'How often do you exercise?', type: 'single', options: ['Regularly (3+/week)', 'Occasionally (1-2/week)', 'Rarely/Never'], risk: { 'Rarely/Never': 2 } },
+    { id: 'smoking', text: 'Do you smoke or use tobacco products?', type: 'single', options: ['Never', 'Former Smoker', 'Current Smoker'], risk: { 'Current Smoker': 3 } },
+    { id: 'alcohol', text: 'How often do you consume alcohol?', type: 'single', options: ['Rarely/Never', 'Moderately (1-2 drinks/day)', 'Heavily (3+ drinks/day)'], risk: { 'Heavily (3+ drinks/day)': 2 } },
+    { id: 'stress', text: 'What is your typical stress level?', type: 'single', options: ['Low', 'Moderate', 'High'], risk: { 'High': 1 } },
+];
+
+const symptomModules = {
+  'Chest Discomfort': {
+    icon: Heart,
+    color: 'red',
     questions: [
-      {
-        id: 'demographics',
-        text: 'Please provide your basic information:',
-        type: 'demographics',
-        required: true
-      },
-      {
-        id: 'onset',
-        text: 'When did the chest pain start?',
-        type: 'single',
-        options: ['Just now (< 1 hour)', 'Today (1-24 hours)', 'Yesterday', '2-7 days ago', 'More than a week ago'],
-        required: true
-      },
-      {
-        id: 'character',
-        text: 'How would you describe the pain?',
-        type: 'single',
-        options: ['Crushing/Pressure', 'Sharp/Stabbing', 'Burning', 'Tearing/Ripping', 'Dull ache', 'Tightness'],
-        required: true
-      },
-      {
-        id: 'severity',
-        text: 'Rate your pain on a scale of 1-10:',
-        type: 'slider',
-        min: 1,
-        max: 10,
-        labels: ['Mild', 'Moderate', 'Severe', 'Unbearable'],
-        required: true
-      },
-      {
-        id: 'location',
-        text: 'Where exactly is the pain located?',
-        type: 'body-map',
-        options: ['Center of chest', 'Left chest', 'Right chest', 'Entire chest', 'Upper chest', 'Lower chest'],
-        required: true
-      },
-      {
-        id: 'radiation',
-        text: 'Does the pain spread anywhere?',
-        type: 'multiple',
-        options: ['Stays in chest', 'Left arm', 'Right arm', 'Both arms', 'Jaw', 'Back', 'Neck', 'Stomach'],
-        required: true
-      },
-      {
-        id: 'triggers',
-        text: 'What were you doing when it started?',
-        type: 'single',
-        options: ['Resting', 'Walking', 'Exercising', 'Eating', 'Stressed/Anxious', 'After trauma/injury'],
-        required: true
-      },
-      {
-        id: 'associatedSymptoms',
-        text: 'Are you experiencing any of these symptoms?',
-        type: 'multiple',
-        options: ['Shortness of breath', 'Sweating', 'Nausea/Vomiting', 'Dizziness', 'Palpitations', 'Fever', 'Cough', 'None'],
-        required: true
-      },
-      {
-        id: 'modifyingFactors',
-        text: 'What makes the pain better or worse?',
-        type: 'multiple',
-        options: ['Rest helps', 'Sitting up helps', 'Deep breathing worsens', 'Movement worsens', 'Eating affects it', 'Nothing helps'],
-        required: true
-      },
-      {
-        id: 'medicalHistory',
-        text: 'Do you have any of these conditions?',
-        type: 'multiple',
-        options: ['Heart disease', 'High blood pressure', 'Diabetes', 'High cholesterol', 'Lung disease', 'Acid reflux', 'None'],
-        required: true
-      },
-      {
-        id: 'medications',
-        text: 'Are you taking any medications?',
-        type: 'text-list',
-        placeholder: 'Enter medication names (optional)',
-        required: false
-      },
-      {
-        id: 'familyHistory',
-        text: 'Any family history of heart disease?',
-        type: 'single',
-        options: ['Yes - parent/sibling before age 55', 'Yes - other relative', 'No', 'Unknown'],
-        required: true
-      }
+      { id: 'demographics', text: 'First, let\'s get some basic information.', type: 'demographics', required: true },
+      { id: 'onset', text: 'When did the discomfort start?', type: 'timeline', options: [
+          { label: 'Just Now', value: '< 1 hour', urgency: 'critical' },
+          { label: 'Today', value: '1-24 hours', urgency: 'high' },
+          { label: 'This Week', value: '1-7 days', urgency: 'moderate' },
+          { label: 'Awhile Ago', value: '> 1 week', urgency: 'low' },
+        ], required: true },
+      { id: 'character', text: 'How would you describe the feeling?', type: 'grid', options: ['Crushing/Pressure', 'Sharp/Stabbing', 'Burning', 'Tearing/Ripping', 'Dull Ache', 'Tightness'], required: true },
+      { id: 'location', text: 'Pinpoint the location of the discomfort.', type: 'body-map', area: 'chest', required: true },
+      { id: 'associated', text: 'Are you experiencing any other symptoms?', type: 'symptom-grid', options: ['Shortness of Breath', 'Sweating', 'Nausea/Vomiting', 'Dizziness', 'Palpitations', 'Fever', 'Cough'], required: true },
+      { id: 'history', text: 'Do you have a history of any of these conditions?', type: 'multiple', options: ['Heart Disease', 'High Blood Pressure', 'Diabetes', 'High Cholesterol', 'Acid Reflux'], required: true },
     ],
     conditions: [
-      {
-        name: 'Acute Coronary Syndrome (Heart Attack)',
-        category: 'Cardiac Emergency',
-        urgency: 'critical',
-        criteria: ['crushing', 'left arm', 'jaw', 'sweating', 'shortness', 'nausea'],
-        weight: 5,
-        description: 'Blood flow to heart muscle is blocked',
-        action: 'Call 911 immediately'
-      },
-      {
-        name: 'Aortic Dissection',
-        category: 'Vascular Emergency',
-        urgency: 'critical',
-        criteria: ['tearing', 'ripping', 'back', 'severe', 'sudden'],
-        weight: 5,
-        description: 'Tear in the major artery from the heart',
-        action: 'Call 911 immediately'
-      },
-      {
-        name: 'Pulmonary Embolism',
-        category: 'Pulmonary Emergency',
-        urgency: 'critical',
-        criteria: ['shortness', 'sudden', 'sharp', 'cough', 'dizziness'],
-        weight: 4,
-        description: 'Blood clot in the lungs',
-        action: 'Emergency room evaluation needed'
-      },
-      {
-        name: 'Unstable Angina',
-        category: 'Cardiac',
-        urgency: 'high',
-        criteria: ['pressure', 'exertion', 'rest helps', 'heart disease'],
-        weight: 3,
-        description: 'Reduced blood flow to heart',
-        action: 'Urgent medical evaluation today'
-      },
-      {
-        name: 'Pericarditis',
-        category: 'Cardiac',
-        urgency: 'moderate',
-        criteria: ['sharp', 'breathing worsens', 'sitting helps', 'fever'],
-        weight: 2,
-        description: 'Inflammation of heart lining',
-        action: 'See doctor within 24 hours'
-      },
-      {
-        name: 'GERD/Acid Reflux',
-        category: 'Gastrointestinal',
-        urgency: 'low',
-        criteria: ['burning', 'eating', 'lying down worse', 'acid reflux'],
-        weight: 1,
-        description: 'Stomach acid backing up into esophagus',
-        action: 'Try antacids, schedule appointment'
-      },
-      {
-        name: 'Costochondritis',
-        category: 'Musculoskeletal',
-        urgency: 'low',
-        criteria: ['sharp', 'movement worsens', 'pressing', 'reproducible'],
-        weight: 1,
-        description: 'Inflammation of rib cartilage',
-        action: 'Rest, anti-inflammatories, follow up if needed'
-      },
-      {
-        name: 'Panic Attack/Anxiety',
-        category: 'Psychological',
-        urgency: 'low',
-        criteria: ['anxiety', 'stressed', 'palpitations', 'dizziness', 'shortness'],
-        weight: 1,
-        description: 'Physical symptoms from anxiety',
-        action: 'Calming techniques, consider counseling'
-      },
-      {
-        name: 'Pneumonia',
-        category: 'Pulmonary',
-        urgency: 'moderate',
-        criteria: ['fever', 'cough', 'sharp', 'breathing worsens'],
-        weight: 2,
-        description: 'Lung infection',
-        action: 'See doctor today for evaluation'
-      },
-      {
-        name: 'Pleurisy',
-        category: 'Pulmonary',
-        urgency: 'moderate',
-        criteria: ['sharp', 'breathing worsens', 'cough', 'fever'],
-        weight: 2,
-        description: 'Inflammation of lung lining',
-        action: 'Medical evaluation recommended'
-      }
+        { name: 'Heart Attack', urgency: 'critical', criteria: { character: ['Crushing/Pressure'], associated: ['Shortness of Breath', 'Sweating'], location: ['center-chest', 'left-chest'], history: ['Heart Disease', 'Diabetes'] }, weight: 5, age: { min: 45 }, prevalence: 'Common cause of ER visits.', seasonal: [] },
+        { name: 'Aortic Dissection', urgency: 'critical', criteria: { character: ['Tearing/Ripping'] }, weight: 5, age: { min: 60 }, prevalence: 'Rare but life-threatening.', seasonal: [] },
+        { name: 'Pulmonary Embolism', urgency: 'critical', criteria: { character: ['Sharp/Stabbing'], associated: ['Shortness of Breath', 'Cough'] }, weight: 4, prevalence: 'Often linked to recent surgery or long travel.', seasonal: [] },
+        { name: 'GERD/Acid Reflux', urgency: 'low', criteria: { character: ['Burning'], history: ['Acid Reflux'] }, weight: 1, age: {}, prevalence: 'Very common.', seasonal: [] },
+    ]
+  },
+  'Headache': {
+    icon: BrainCircuit,
+    color: 'purple',
+    questions: [
+      { id: 'demographics', text: 'First, let\'s get some basic information.', type: 'demographics', required: true },
+      { id: 'onset', text: 'When did the headache start?', type: 'timeline', options: [
+          { label: 'Just Now', value: '< 1 hour', urgency: 'critical' },
+          { label: 'Today', value: '1-24 hours', urgency: 'high' },
+          { label: 'This Week', value: '1-7 days', urgency: 'moderate' },
+          { label: 'Awhile Ago', value: '> 1 week', urgency: 'low' },
+        ], required: true },
+      { id: 'character', text: 'How would you describe the pain?', type: 'grid', options: ['Throbbing/Pulsating', 'Constant Pressure', 'Sharp/Stabbing', 'Thunderclap (Sudden & Severe)'], required: true },
+      { id: 'location', text: 'Where on your head do you feel it?', type: 'body-map', area: 'head', required: true },
+      { id: 'associated', text: 'Any other symptoms?', type: 'symptom-grid', options: ['Nausea/Vomiting', 'Sensitivity to Light', 'Sensitivity to Sound', 'Vision Changes', 'Fever', 'Stiff Neck'], required: true },
+      { id: 'history', text: 'Do you have a history of headaches?', type: 'multiple', options: ['Migraines', 'Tension Headaches', 'Sinus Issues', 'Head Injury'], required: true },
+    ],
+    conditions: [
+        { name: 'Subarachnoid Hemorrhage', urgency: 'critical', criteria: { character: ['Thunderclap (Sudden & Severe)'], associated: ['Stiff Neck', 'Vomiting'] }, weight: 5, age: {}, prevalence: 'Extremely serious, requires immediate attention.', seasonal: [] },
+        { name: 'Migraine', urgency: 'moderate', criteria: { character: ['Throbbing/Pulsating'], associated: ['Nausea/Vomiting', 'Sensitivity to Light'], history: ['Migraines'] }, weight: 3, age: { max: 50 }, prevalence: 'Common, especially in younger adults.', seasonal: [] },
+        { name: 'Tension Headache', urgency: 'low', criteria: { character: ['Constant Pressure'], location: ['forehead', 'temples', 'back-head'] }, weight: 1, age: {}, prevalence: 'Most common type of headache.', seasonal: ['spring'] }, // Example seasonal link
+        { name: 'Meningitis', urgency: 'high', criteria: { associated: ['Fever', 'Stiff Neck', 'Sensitivity to Light'] }, weight: 4, age: { max: 25 }, prevalence: 'Serious infection, more common in communal living.', seasonal: [] },
+    ]
+  },
+  'Abdominal Pain': {
+    icon: Droplet,
+    color: 'blue',
+    questions: [
+        { id: 'demographics', text: 'First, let\'s get some basic information.', type: 'demographics', required: true },
+        { id: 'onset', text: 'When did the pain start?', type: 'timeline', options: [
+          { label: 'Just Now', value: '< 1 hour', urgency: 'critical' },
+          { label: 'Today', value: '1-24 hours', urgency: 'high' },
+          { label: 'This Week', value: '1-7 days', urgency: 'moderate' },
+          { label: 'Awhile Ago', value: '> 1 week', urgency: 'low' },
+        ], required: true },
+        { id: 'character', text: 'How would you describe the pain?', type: 'grid', options: ['Sharp/Cramping', 'Dull/Achy', 'Burning', 'Bloating/Gas'], required: true },
+        { id: 'location', text: 'Where is the pain located?', type: 'body-map', area: 'abdomen', required: true },
+        { id: 'associated', text: 'Any other symptoms?', type: 'symptom-grid', options: ['Nausea/Vomiting', 'Fever', 'Diarrhea', 'Constipation', 'Bloody Stool'], required: true },
+    ],
+    conditions: [
+        { name: 'Appendicitis', urgency: 'high', criteria: { location: ['right-lower-quadrant'], associated: ['Fever', 'Nausea/Vomiting'] }, weight: 4, age: { max: 40 }, prevalence: 'Common surgical emergency.', seasonal: [] },
+        { name: 'Gastroenteritis', urgency: 'low', criteria: { character: ['Sharp/Cramping'], associated: ['Nausea/Vomiting', 'Diarrhea'] }, weight: 1, age: {}, prevalence: 'Very common ("stomach flu").', seasonal: ['winter'] },
     ]
   }
 };
 
-// Calculate diagnosis probability
-const calculateDiagnoses = (answers, conditions) => {
-  const scoredConditions = conditions.map(condition => {
-    let score = 0;
-    let matchedCriteria = [];
+
+// --- UTILITY & LOGIC FUNCTIONS ---
+
+const getSeason = () => {
+    const month = new Date().getMonth();
+    if (month >= 2 && month <= 4) return 'spring';
+    if (month >= 5 && month <= 7) return 'summer';
+    if (month >= 8 && month <= 10) return 'autumn';
+    return 'winter';
+};
+
+const analysisEngine = (answers, module) => {
+    if (!module || !answers.demographics) return { diagnoses: [], risk: { score: 0, factors: [] }, confidence: 0 };
     
-    // Convert answers to searchable text
-    const answerText = Object.values(answers).flat().join(' ').toLowerCase();
-    
-    // Check each criterion
-    condition.criteria.forEach(criterion => {
-      if (answerText.includes(criterion.toLowerCase())) {
-        score += condition.weight;
-        matchedCriteria.push(criterion);
-      }
+    const { conditions } = module;
+    const lifestyleRisk = Object.keys(answers.lifestyle || {}).reduce((acc, key) => {
+        const question = lifestyleQuestions.find(q => q.id === key);
+        const answer = answers.lifestyle[key];
+        return acc + (question?.risk?.[answer] || 0);
+    }, 0);
+
+    let totalPossibleScore = 0;
+    const scoredConditions = conditions.map(cond => {
+        let score = 0;
+        let matchedCriteria = [];
+
+        Object.entries(cond.criteria).forEach(([key, values]) => {
+            const userAnswer = answers[key];
+            if (!userAnswer) return;
+
+            const userAnswersArray = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
+            if (key === 'associated') { // Handle symptom grid with severity
+                userAnswersArray.forEach(symptomObj => {
+                    if (values.includes(symptomObj.name)) {
+                        score += cond.weight * (symptomObj.severity / 3); // Weight by severity
+                        matchedCriteria.push(`${symptomObj.name} (Severity ${symptomObj.severity})`);
+                    }
+                });
+            } else {
+                 userAnswersArray.forEach(ans => {
+                    if (values.includes(ans)) {
+                        score += cond.weight;
+                        matchedCriteria.push(ans);
+                    }
+                });
+            }
+        });
+
+        // Age Correlation
+        const age = parseInt(answers.demographics.age, 10);
+        if (cond.age.min && age < cond.age.min) score *= 0.5;
+        if (cond.age.max && age > cond.age.max) score *= 0.5;
+        
+        totalPossibleScore = Math.max(totalPossibleScore, score);
+        return { ...cond, score, matchedCriteria };
     });
-    
-    // Age adjustment for cardiac conditions
-    const age = parseInt(answers.demographics?.age);
-    if (condition.category.includes('Cardiac') && age > 50) {
-      score += 1;
+
+    const totalScoreSum = scoredConditions.reduce((sum, cond) => sum + cond.score, 0);
+    if (totalScoreSum === 0) {
+       return { diagnoses: [], risk: { score: 0, factors: [] }, confidence: 50 };
     }
     
-    // Sex adjustment for cardiac conditions
-    if (condition.category.includes('Cardiac') && answers.demographics?.sex === 'Male' && age > 40) {
-      score += 0.5;
+    const top3 = scoredConditions
+        .map(c => ({ ...c, probability: totalScoreSum > 0 ? (c.score / totalScoreSum) * 100 : 0 }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .filter(c => c.score > 0);
+
+    // Risk Stratification
+    let riskScore = lifestyleRisk;
+    let riskFactors = [];
+    if (lifestyleRisk > 3) riskFactors.push('Lifestyle Factors');
+    if (top3[0]) {
+        const primaryUrgency = top3[0].urgency;
+        if (primaryUrgency === 'critical') riskScore += 10;
+        if (primaryUrgency === 'high') riskScore += 7;
+        if (primaryUrgency === 'moderate') riskScore += 4;
+        riskFactors.push(`Top concern: ${top3[0].name}`);
     }
-    
-    // Specific pattern matching
-    if (condition.name.includes('Heart Attack')) {
-      if (answers.character === 'Crushing/Pressure' && 
-          (answers.radiation?.includes('Left arm') || answers.radiation?.includes('Jaw'))) {
-        score += 3;
-      }
+    const onsetUrgency = module.questions.find(q=>q.id==='onset').options.find(o=>o.value === answers.onset)?.urgency
+    if (onsetUrgency === 'critical') {
+        riskScore += 5;
+        riskFactors.push('Sudden Onset');
     }
-    
-    if (condition.name.includes('Aortic Dissection')) {
-      if (answers.character === 'Tearing/Ripping' && answers.radiation?.includes('Back')) {
-        score += 4;
-      }
-    }
-    
-    if (condition.name.includes('GERD')) {
-      if (answers.character === 'Burning' && answers.modifyingFactors?.includes('Eating affects it')) {
-        score += 2;
-      }
-    }
-    
-    return {
-      ...condition,
-      score,
-      matchedCriteria,
-      probability: score > 0 ? Math.min((score / (condition.weight * condition.criteria.length)) * 100, 95) : 0
-    };
-  });
-  
-  return scoredConditions
-    .filter(c => c.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+
+    // Confidence Score
+    const answeredQuestions = Object.keys(answers).length - 2; // Exclude demographics & lifestyle
+    const totalQuestions = module.questions.length -1;
+    const completeness = (answeredQuestions / totalQuestions) * 100;
+    const specificity = top3.length > 0 ? (top3[0].score / totalScoreSum) * 100 : 0; // How much the top diagnosis stands out
+    const confidence = Math.min(95, Math.round((completeness * 0.6) + (specificity * 0.4)));
+
+    return { diagnoses: top3, risk: { score: riskScore, factors: riskFactors }, confidence };
 };
 
-// Risk score calculator
-const calculateRiskScore = (answers, module) => {
-  let score = 0;
-  const factors = [];
-  
-  // Age risk
-  const age = parseInt(answers.demographics?.age);
-  if (age > 65) { score += 3; factors.push('Age > 65'); }
-  else if (age > 45) { score += 2; factors.push('Age > 45'); }
-  
-  // Sex risk for cardiac
-  if (answers.demographics?.sex === 'Male' && age > 40) { score += 1; factors.push('Male > 40'); }
-  
-  // Character of pain
-  if (answers.character === 'Crushing/Pressure') { score += 3; factors.push('Crushing pain'); }
-  if (answers.character === 'Tearing/Ripping') { score += 4; factors.push('Tearing pain'); }
-  
-  // Severity
-  if (answers.severity >= 8) { score += 2; factors.push('Severe pain'); }
-  
-  // Radiation
-  if (answers.radiation?.includes('Left arm') || answers.radiation?.includes('Jaw')) {
-    score += 3; factors.push('Classic radiation pattern');
-  }
-  
-  // Associated symptoms
-  const dangerous = ['Shortness of breath', 'Sweating', 'Dizziness'];
-  const hasD = dangerous.filter(d => answers.associatedSymptoms?.includes(d));
-  if (hasD.length > 0) {
-    score += hasD.length * 2;
-    factors.push(...hasD);
-  }
-  
-  // Medical history
-  const riskConditions = ['Heart disease', 'Diabetes', 'High blood pressure'];
-  const hasRisk = riskConditions.filter(r => answers.medicalHistory?.includes(r));
-  score += hasRisk.length * 2;
-  if (hasRisk.length) factors.push('Cardiac risk factors');
-  
-  return { score, factors };
-};
 
-// Question Card Component
-function QuestionCard({ question, answer, onChange, onComplete, index, isActive, onEdit }) {
-  const [localAnswer, setLocalAnswer] = useState(answer);
-  const cardRef = useRef(null);
-  
-  useEffect(() => {
-    if (isActive && cardRef.current) {
-      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [isActive]);
-  
-  const handleComplete = () => {
-    if (question.required && !isAnswerComplete()) return;
-    onChange(localAnswer);
-    onComplete();
-  };
-  
-  const isAnswerComplete = () => {
-    if (question.type === 'demographics') {
-      return localAnswer?.age && localAnswer?.sex;
-    }
-    if (question.type === 'multiple') {
-      return localAnswer && localAnswer.length > 0;
-    }
-    return !!localAnswer;
-  };
-  
-  const isCompleted = answer && isAnswerComplete();
-  
-  return (
-    <div 
-      ref={cardRef}
-      className={`mb-6 transition-all duration-500 ${
-        isActive ? 'scale-100 opacity-100' : isCompleted ? 'scale-95 opacity-100' : 'scale-95 opacity-50'
-      }`}
+// --- UI COMPONENTS ---
+
+const GlassmorphismCard = ({ children, className = '', ...props }) => (
+    <motion.div
+        className={`bg-white/50 backdrop-blur-xl border border-white/20 rounded-2xl shadow-lg ${className}`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+        {...props}
     >
-      <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${
-        isActive ? 'ring-4 ring-indigo-500 ring-opacity-50' : ''
-      }`}>
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-              <span className="text-sm font-medium text-indigo-600 mb-1 block">
-                Question {index + 1}
-              </span>
-              <h3 className="text-xl font-semibold text-gray-800">
-                {question.text}
-              </h3>
-            </div>
-            {isCompleted && !isActive && (
-              <button
-                onClick={onEdit}
-                className="p-2 text-gray-500 hover:text-indigo-600 transition"
-              >
-                <Edit2 className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-          
-          {(isActive || isCompleted) && (
-            <div className="space-y-4">
-              {/* Demographics with Male/Female buttons */}
-              {question.type === 'demographics' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Age <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={localAnswer?.age || ''}
-                      onChange={(e) => setLocalAnswer({ ...localAnswer, age: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      placeholder="Enter your age"
-                      disabled={!isActive}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Biological Sex <span className="text-red-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => setLocalAnswer({ ...localAnswer, sex: 'Male' })}
-                        disabled={!isActive}
-                        className={`py-3 px-4 rounded-lg border-2 font-medium transition-all ${
-                          localAnswer?.sex === 'Male'
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 hover:border-gray-300'
-                        } ${!isActive ? 'cursor-not-allowed' : ''}`}
-                      >
-                        Male
-                      </button>
-                      <button
-                        onClick={() => setLocalAnswer({ ...localAnswer, sex: 'Female' })}
-                        disabled={!isActive}
-                        className={`py-3 px-4 rounded-lg border-2 font-medium transition-all ${
-                          localAnswer?.sex === 'Female'
-                            ? 'border-pink-500 bg-pink-50 text-pink-700'
-                            : 'border-gray-200 hover:border-gray-300'
-                        } ${!isActive ? 'cursor-not-allowed' : ''}`}
-                      >
-                        Female
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Single choice */}
-              {question.type === 'single' && (
-                <div className="space-y-2">
-                  {question.options.map(option => (
-                    <button
-                      key={option}
-                      onClick={() => setLocalAnswer(option)}
-                      disabled={!isActive}
-                      className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                        localAnswer === option
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                          : 'border-gray-200 hover:border-gray-300'
-                      } ${!isActive ? 'cursor-not-allowed' : ''}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{option}</span>
-                        {localAnswer === option && (
-                          <CheckCircle className="w-5 h-5 text-indigo-600" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {/* Multiple choice */}
-              {question.type === 'multiple' && (
-                <div className="space-y-2">
-                  {question.options.map(option => {
-                    const isSelected = localAnswer?.includes(option);
-                    return (
-                      <button
-                        key={option}
-                        onClick={() => {
-                          if (!isActive) return;
-                          const current = localAnswer || [];
-                          if (option === 'None') {
-                            setLocalAnswer(['None']);
-                          } else {
-                            const filtered = current.filter(o => o !== 'None');
-                            if (isSelected) {
-                              setLocalAnswer(filtered.filter(o => o !== option));
-                            } else {
-                              setLocalAnswer([...filtered, option]);
-                            }
-                          }
-                        }}
-                        disabled={!isActive}
-                        className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                          isSelected
-                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                            : 'border-gray-200 hover:border-gray-300'
-                        } ${!isActive ? 'cursor-not-allowed' : ''}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{option}</span>
-                          {isSelected && (
-                            <CheckCircle className="w-5 h-5 text-indigo-600" />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              
-              {/* Slider */}
-              {question.type === 'slider' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm text-gray-600">
-                    {question.labels.map((label, idx) => (
-                      <span key={idx}>{label}</span>
-                    ))}
-                  </div>
-                  <input
-                    type="range"
-                    min={question.min}
-                    max={question.max}
-                    value={localAnswer || question.min}
-                    onChange={(e) => setLocalAnswer(parseInt(e.target.value))}
-                    disabled={!isActive}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                  />
-                  <div className="text-center text-3xl font-bold text-indigo-600">
-                    {localAnswer || question.min}
-                  </div>
-                </div>
-              )}
-              
-              {/* Body map */}
-              {question.type === 'body-map' && (
-                <div className="grid grid-cols-2 gap-2">
-                  {question.options.map(option => (
-                    <button
-                      key={option}
-                      onClick={() => setLocalAnswer(option)}
-                      disabled={!isActive}
-                      className={`px-3 py-2 rounded-lg border-2 transition-all ${
-                        localAnswer === option
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                          : 'border-gray-200 hover:border-gray-300'
-                      } ${!isActive ? 'cursor-not-allowed' : ''}`}
-                    >
-                      <Heart className="w-5 h-5 mx-auto mb-1" />
-                      <span className="text-sm font-medium">{option}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {/* Text list */}
-              {question.type === 'text-list' && (
-                <div>
-                  <textarea
-                    value={localAnswer || ''}
-                    onChange={(e) => setLocalAnswer(e.target.value)}
-                    placeholder={question.placeholder}
-                    disabled={!isActive}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    rows={3}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-          
-          {isActive && (
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={handleComplete}
-                disabled={question.required && !isAnswerComplete()}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                  question.required && !isAnswerComplete()
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                }`}
-              >
-                Continue
-                <ChevronRight className="inline-block w-5 h-5 ml-2" />
-              </button>
-            </div>
-          )}
-          
-          {isCompleted && !isActive && (
-            <div className="mt-4 p-3 bg-green-50 rounded-lg">
-              <div className="flex items-center text-green-700">
-                <CheckCircle className="w-5 h-5 mr-2" />
-                <span className="font-medium">Answer saved</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+        {children}
+    </motion.div>
+);
 
-export default function MedicalSymptomChecker() {
-  const [answers, setAnswers] = useState({});
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [showResults, setShowResults] = useState(false);
-  const [urgencyLevel, setUrgencyLevel] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
-  const [topDiagnoses, setTopDiagnoses] = useState([]);
-  
-  const symptom = 'Chest Pain';
-  const module = symptomModuleMap[symptom];
-  const questions = module?.questions || [];
-  
-  const handleAnswerChange = (questionId, answer) => {
-    setAnswers(prev => ({ ...prev, [questionId]: answer }));
-  };
-  
-  const handleQuestionComplete = (index) => {
-    if (index === questions.length - 1) {
-      processResults();
-    } else {
-      setCurrentQuestion(index + 1);
-    }
-  };
-  
-  const handleEditQuestion = (index) => {
-    setCurrentQuestion(index);
-  };
-  
-  const processResults = () => {
-    const { score, factors } = calculateRiskScore(answers, module);
+const SymptomSelector = ({ onSelect }) => (
+    <GlassmorphismCard className="p-8 text-center">
+        <Stethoscope size={48} className="mx-auto text-white/80 mb-4" />
+        <h2 className="text-3xl font-bold text-gray-800 mb-2">SymptoSphere AI</h2>
+        <p className="text-gray-700 mb-8">Please select your primary symptom to begin.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(symptomModules).map(([name, { icon: Icon, color }]) => (
+                <motion.button
+                    key={name}
+                    onClick={() => onSelect(name)}
+                    className={`p-6 rounded-xl text-left transition-all duration-300 bg-white/70 hover:bg-white shadow-md hover:shadow-2xl hover:-translate-y-2 border-t-2 border-${color}-300`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    <Icon size={32} className={`mb-3 text-${color}-500`} />
+                    <span className="text-xl font-semibold text-gray-800">{name}</span>
+                </motion.button>
+            ))}
+        </div>
+    </GlassmorphismCard>
+);
+
+const DisclaimerModal = ({ onAccept }) => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <GlassmorphismCard className="max-w-lg p-8">
+            <div className="flex items-center gap-4 mb-4">
+                <AlertTriangle size={40} className="text-yellow-500" />
+                <h2 className="text-2xl font-bold text-gray-800">Important Disclaimer</h2>
+            </div>
+            <p className="text-gray-700 mb-6">
+                SymptoSphere is an informational tool and not a substitute for professional medical advice, diagnosis, or treatment.
+                <b> If you believe you are having a medical emergency, call 911 immediately.</b>
+            </p>
+            <motion.button
+                onClick={onAccept}
+                className="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-teal-700 transition-all"
+                whileHover={{ scale: 1.02 }}
+            >
+                I Understand and Accept
+            </motion.button>
+        </GlassmorphismCard>
+    </div>
+);
+
+// --- INTERACTIVE INPUT COMPONENTS ---
+
+const InteractiveBodyMap = ({ area, selected, onSelect, disabled }) => {
+    // A more detailed and anatomically correct SVG structure
+    const BodySVG = () => (
+        <g>
+            {/* Head */}
+            <path d="M 50,70 A 50,50 0 1 1 150,70 A 40,60 0 0 1 120,150 L 80,150 A 40,60 0 0 1 50,70 Z" fill="#E6E6FA" stroke="#b2b2d8" strokeWidth="1"/>
+            {/* Torso */}
+            <path d="M 80,150 C 60,200 60,250 80,300 L 120,300 C 140,250 140,200 120,150 Z" fill="#E6E6FA" stroke="#b2b2d8" strokeWidth="1"/>
+        </g>
+    );
+
+    const locations = {
+        head: [
+            { id: 'forehead', label: 'Forehead', path: "M60,70 Q100,50 140,70 L130,90 L70,90Z" },
+            { id: 'temples', label: 'Temples', path: "M50,70 L70,90 V110 L55,100Z M150,70 L130,90 V110 L145,100Z" },
+            { id: 'back-head', label: 'Back', path: "M70,110 C 60,130 100,155 140,130 L120,150 L80,150 Z" }
+        ],
+        chest: [
+            { id: 'left-chest', label: 'Left Chest', path: "M80,150 C65,180 70,220 85,240 L100,240 L100,150Z" },
+            { id: 'center-chest', label: 'Center Chest', path: "M100,150 L100,240 L115,240 L115,150Z" },
+            { id: 'right-chest', label: 'Right Chest', path: "M115,150 L115,240 L130,240 C145,220 150,180 135,150Z" }
+        ],
+        abdomen: [
+            { id: 'right-upper-quadrant', label: 'RUQ', path: "M100,245 h15 v25 h-15 z" },
+            { id: 'left-upper-quadrant', label: 'LUQ', path: "M85,245 h15 v25 h-15 z" },
+            { id: 'right-lower-quadrant', label: 'RLQ', path: "M100,270 h15 v25 h-15 z" },
+            { id: 'left-lower-quadrant', label: 'LLQ', path: "M85,270 h15 v25 h-15 z" },
+        ]
+    };
+
+    const activeArea = locations[area];
+    const color = {head: 'purple', chest: 'red', abdomen: 'blue'}[area];
+
+    return (
+        <div className="p-2 bg-slate-100/50 rounded-lg">
+            <svg viewBox="20 40 160 280" className={`w-full h-auto max-h-[400px] ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}>
+                <BodySVG />
+                {activeArea.map(({ id, path }) => (
+                    <path
+                        key={id}
+                        d={path}
+                        onClick={() => !disabled && onSelect(id)}
+                        className={`transition-all duration-200 ${selected === id ? `fill-${color}-500 stroke-${color}-700 opacity-80` : `fill-${color}-300/60 hover:fill-${color}-400/80 stroke-transparent`} ${disabled ? '' : 'cursor-pointer'}`}
+                    />
+                ))}
+            </svg>
+        </div>
+    );
+};
+
+const TimelineSelector = ({ options, selected, onSelect, disabled }) => (
+    <div className="flex justify-between items-center p-2 bg-slate-100/50 rounded-lg">
+        {options.map(({ label, value, urgency }) => {
+            const colors = {
+                critical: 'bg-red-500 ring-red-300',
+                high: 'bg-orange-500 ring-orange-300',
+                moderate: 'bg-yellow-500 ring-yellow-300',
+                low: 'bg-green-500 ring-green-300',
+            };
+            return (
+                <div key={value} className="flex flex-col items-center flex-1">
+                    <button
+                        onClick={() => !disabled && onSelect(value)}
+                        disabled={disabled}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${colors[urgency]} ${selected === value ? 'ring-4 scale-110' : 'hover:scale-105'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                    >
+                    </button>
+                    <span className="text-xs mt-2 font-semibold text-gray-600">{label}</span>
+                </div>
+            );
+        })}
+    </div>
+);
+
+const SymptomGrid = ({ options, selected, onSelect, disabled }) => {
+    const handleSelect = (optionName) => {
+        if (disabled) return;
+        const existing = selected.find(s => s.name === optionName);
+        if (existing) {
+            const newSeverity = (existing.severity % 3) + 1;
+            onSelect(selected.map(s => s.name === optionName ? { ...s, severity: newSeverity } : s));
+        } else {
+            onSelect([...selected, { name: optionName, severity: 1 }]);
+        }
+    };
+    const handleDeselect = (e, optionName) => {
+        e.stopPropagation();
+        if (disabled) return;
+        onSelect(selected.filter(s => s.name !== optionName));
+    };
     
-    // Calculate top diagnoses
-    const diagnoses = calculateDiagnoses(answers, module.conditions);
-    setTopDiagnoses(diagnoses);
+    const handleKeyDown = (e, optionName) => {
+        if (disabled) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleSelect(optionName);
+        }
+    };
+
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {options.map(option => {
+                const current = selected.find(s => s.name === option);
+                return (
+                    <div
+                        key={option}
+                        onClick={() => handleSelect(option)}
+                        onKeyDown={(e) => handleKeyDown(e, option)}
+                        role="button"
+                        tabIndex={disabled ? -1 : 0}
+                        aria-pressed={!!current}
+                        className={`relative p-4 rounded-lg text-center transition-all duration-200 border-2 ${current ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white/80 hover:border-gray-300'} ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                    >
+                        <span className={`font-semibold ${current ? 'text-teal-700' : 'text-gray-700'}`}>{option}</span>
+                        {current && (
+                            <>
+                                <button aria-label={`Remove ${option}`} onClick={(e) => handleDeselect(e, option)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs font-bold flex items-center justify-center z-10">&times;</button>
+                                <div className="flex justify-center gap-1 mt-2">
+                                    {[1, 2, 3].map(level => (
+                                        <div key={level} className={`w-3 h-3 rounded-full ${level <= current.severity ? 'bg-teal-500' : 'bg-gray-300'}`}></div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+
+// --- QUESTION FLOW ---
+const QuestionCard = ({ question, answer, onChange, onBack, onNext, isFirst, isLast }) => {
+    const isComplete = () => {
+        if (!question.required) return true;
+        if (question.type === 'demographics') return answer?.age && answer?.sex;
+        if (Array.isArray(answer)) return answer.length > 0;
+        return !!answer;
+    };
     
-    // Determine urgency based on diagnoses and risk score
-    let urgency;
-    if (diagnoses[0]?.urgency === 'critical' || score >= 10) urgency = 'critical';
-    else if (diagnoses[0]?.urgency === 'high' || score >= 7) urgency = 'high';
-    else if (diagnoses[0]?.urgency === 'moderate' || score >= 4) urgency = 'moderate';
-    else urgency = 'low';
-    
-    setUrgencyLevel(urgency);
-    
-    // Generate recommendations
-    const recs = [];
-    if (urgency === 'critical') {
-      recs.push({
-        icon: <Phone className="w-6 h-6" />,
-        title: 'Call 911 Immediately',
-        description: 'Your symptoms require immediate emergency evaluation.',
-        action: 'tel:911'
-      });
-    } else if (urgency === 'high') {
-      recs.push({
-        icon: <AlertTriangle className="w-6 h-6" />,
-        title: 'Visit Emergency Room',
-        description: 'Go to the nearest ER within the next hour.',
-        action: null
-      });
-    } else if (urgency === 'moderate') {
-      recs.push({
-        icon: <Calendar className="w-6 h-6" />,
-        title: 'See Doctor Today',
-        description: 'Schedule an urgent appointment or visit urgent care.',
-        action: null
-      });
-    } else {
-      recs.push({
-        icon: <CheckCircle className="w-6 h-6" />,
-        title: 'Monitor Symptoms',
-        description: 'Watch for changes. Schedule routine appointment if persists.',
-        action: null
-      });
-    }
-    
-    setRecommendations(recs);
-    setShowResults(true);
-  };
-  
-  if (showResults) {
-    const { score, factors } = calculateRiskScore(answers, module);
+    const renderInput = () => {
+        switch (question.type) {
+            case 'demographics':
+                return (
+                    <div className="space-y-4">
+                        <input type="number" placeholder="Age" value={answer?.age || ''} onChange={e => onChange({ ...answer, age: e.target.value })} className="w-full p-3 rounded-lg border border-gray-300" />
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => onChange({ ...answer, sex: 'Male' })} className={`py-3 px-4 rounded-lg border-2 font-medium ${answer?.sex === 'Male' ? 'border-teal-500 bg-teal-50' : 'border-gray-200'}`}>Male</button>
+                            <button onClick={() => onChange({ ...answer, sex: 'Female' })} className={`py-3 px-4 rounded-lg border-2 font-medium ${answer?.sex === 'Female' ? 'border-teal-500 bg-teal-50' : 'border-gray-200'}`}>Female</button>
+                        </div>
+                    </div>
+                );
+            case 'timeline':
+                return <TimelineSelector options={question.options} selected={answer} onSelect={onChange} />;
+            case 'grid':
+                return (<div className="grid grid-cols-2 gap-3">
+                    {question.options.map(opt => <button key={opt} onClick={() => onChange(opt)} className={`p-4 rounded-lg border-2 font-medium ${answer === opt ? 'border-teal-500 bg-teal-50' : 'border-gray-200'}`}>{opt}</button>)}
+                </div>)
+            case 'body-map':
+                return <InteractiveBodyMap area={question.area} selected={answer} onSelect={onChange} />;
+            case 'symptom-grid':
+                return <SymptomGrid options={question.options} selected={answer || []} onSelect={onChange} />;
+            case 'single':
+            case 'multiple':
+                const isMultiple = question.type === 'multiple';
+                const handleSelect = (option) => {
+                    if (isMultiple) {
+                        const current = answer || [];
+                        const newAnswer = current.includes(option) ? current.filter(item => item !== option) : [...current, option];
+                        onChange(newAnswer);
+                    } else {
+                        onChange(option);
+                    }
+                };
+                 return (
+                    <div className="space-y-2">
+                        {question.options.map(option => {
+                            const isSelected = isMultiple ? (answer || []).includes(option) : answer === option;
+                            return (
+                                <button key={option} onClick={() => handleSelect(option)} className={`w-full text-left px-4 py-3 rounded-lg border-2 ${isSelected ? 'border-teal-500 bg-teal-50' : 'border-gray-200'}`}>
+                                    {option}
+                                </button>
+                            );
+                        })}
+                    </div>
+                );
+            default: return null;
+        }
+    };
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            {/* Header */}
-            <div className={`p-6 text-white ${
-              urgencyLevel === 'critical' ? 'bg-gradient-to-r from-red-600 to-red-700' :
-              urgencyLevel === 'high' ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
-              urgencyLevel === 'moderate' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
-              'bg-gradient-to-r from-green-500 to-green-600'
-            }`}>
-              <h2 className="text-3xl font-bold mb-2">Assessment Complete</h2>
-              <p className="text-xl opacity-90">
-                Risk Level: {urgencyLevel.charAt(0).toUpperCase() + urgencyLevel.slice(1)}
-              </p>
+        <GlassmorphismCard className="p-8">
+            <h3 className="text-2xl font-semibold text-gray-800 mb-6">{question.text}</h3>
+            <div>{renderInput()}</div>
+            <div className="flex justify-between mt-8">
+                <button onClick={onBack} disabled={isFirst} className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium bg-white/80 text-gray-700 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed">
+                    <ChevronLeft size={20} /> Back
+                </button>
+                <button onClick={onNext} disabled={!isComplete()} className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium bg-teal-600 text-white hover:bg-teal-700 disabled:bg-gray-400">
+                    {isLast ? 'See Results' : 'Next'} <ChevronRight size={20} />
+                </button>
             </div>
-            
-            {/* Top 3 Diagnoses */}
-            <div className="p-6 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
-              <h3 className="text-xl font-semibold mb-4 flex items-center">
-                <Stethoscope className="w-6 h-6 mr-2 text-indigo-600" />
-                Most Likely Diagnoses
-              </h3>
-              <div className="space-y-4">
-                {topDiagnoses.map((diagnosis, idx) => (
-                  <div key={idx} className={`p-4 rounded-lg border-2 ${
-                    idx === 0 ? 'border-indigo-300 bg-white' : 'border-gray-200 bg-gray-50'
-                  }`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-lg font-bold ${
-                            idx === 0 ? 'text-indigo-600' : 'text-gray-600'
-                          }`}>
-                            #{idx + 1}
-                          </span>
-                          <h4 className="text-lg font-semibold">{diagnosis.name}</h4>
-                        </div>
-                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium mt-1 ${
-                          diagnosis.urgency === 'critical' ? 'bg-red-100 text-red-700' :
-                          diagnosis.urgency === 'high' ? 'bg-orange-100 text-orange-700' :
-                          diagnosis.urgency === 'moderate' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>
-                          {diagnosis.category}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-indigo-600">
-                          {Math.round(diagnosis.probability)}%
-                        </div>
-                        <div className="text-xs text-gray-500">likelihood</div>
-                      </div>
-                    </div>
-                    <p className="text-gray-600 text-sm mb-2">{diagnosis.description}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-gray-500">
-                        Matched: {diagnosis.matchedCriteria.join(', ')}
-                      </div>
-                      <div className="text-sm font-medium text-indigo-600">
-                        {diagnosis.action}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Risk Score */}
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold">Risk Score</h3>
-                <div className="text-3xl font-bold text-indigo-600">{score}/20</div>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-                <div 
-                  className={`h-4 rounded-full transition-all duration-500 ${
-                    urgencyLevel === 'critical' ? 'bg-red-500' :
-                    urgencyLevel === 'high' ? 'bg-orange-500' :
-                    urgencyLevel === 'moderate' ? 'bg-yellow-500' :
-                    'bg-green-500'
-                  }`}
-                  style={{ width: `${(score / 20) * 100}%` }}
-                />
-              </div>
-              {factors.length > 0 && (
-                <div className="mt-4">
-                  <p className="font-medium mb-2">Risk Factors Identified:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {factors.map((factor, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
-                        {factor}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Recommendations */}
-            <div className="p-6 border-b">
-              <h3 className="text-xl font-semibold mb-4">Recommended Actions</h3>
-              <div className="space-y-4">
-                {recommendations.map((rec, idx) => (
-                  <div key={idx} className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg">
-                    <div className={`p-3 rounded-full ${
-                      idx === 0 && urgencyLevel === 'critical' ? 'bg-red-500 text-white' :
-                      idx === 0 && urgencyLevel === 'high' ? 'bg-orange-500 text-white' :
-                      'bg-blue-500 text-white'
-                    }`}>
-                      {rec.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-lg">{rec.title}</h4>
-                      <p className="text-gray-600 mt-1">{rec.description}</p>
-                      {rec.action && (
-                        <a href={rec.action} className="inline-block mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-                          Call Now
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Important Information */}
-            <div className="p-6 bg-yellow-50 border-t border-yellow-200">
-              <div className="flex items-start space-x-3">
-                <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-1" />
-                <div>
-                  <h4 className="font-semibold text-yellow-800 mb-2">Important Disclaimer</h4>
-                  <p className="text-yellow-700 text-sm">
-                    This assessment is not a substitute for professional medical advice. If you're experiencing severe symptoms 
-                    or feel your life is in danger, call 911 immediately. Always consult with a qualified healthcare provider 
-                    for proper diagnosis and treatment.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Summary Report */}
-            <div className="p-6 border-t">
-              <button
-                onClick={() => {
-                  const report = generateReport(answers, score, factors, urgencyLevel, topDiagnoses);
-                  console.log(report); // In production, this would download/email
-                }}
-                className="flex items-center space-x-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-              >
-                <FileText className="w-5 h-5" />
-                <span>Download Summary Report</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+        </GlassmorphismCard>
     );
-  }
+};
+
+const Questionnaire = ({ module, onComplete }) => {
+    const [currentStep, setCurrentStep] = useState(0);
+    const [answers, setAnswers] = useState({ lifestyle: {} });
+
+    const questions = useMemo(() => [
+        ...module.questions,
+        ...lifestyleQuestions.map(q => ({...q, id: `lifestyle.${q.id}`}))
+    ], [module]);
+
+    const handleNext = () => {
+        if (currentStep < questions.length - 1) {
+            setCurrentStep(s => s + 1);
+        } else {
+            const finalAnswers = Object.entries(answers).reduce((acc, [key, val]) => {
+                if (key.startsWith('lifestyle.')) {
+                    acc.lifestyle[key.replace('lifestyle.', '')] = val;
+                } else {
+                    acc[key] = val;
+                }
+                return acc;
+            }, { lifestyle: {} });
+            onComplete(finalAnswers);
+        }
+    };
+    
+    const handleBack = () => setCurrentStep(s => Math.max(0, s - 1));
+
+    const handleAnswer = (questionId, answer) => {
+        setAnswers(prev => ({...prev, [questionId]: answer}));
+    };
+
+    const currentQuestion = questions[currentStep];
+
+    return (
+        <div className="w-full max-w-2xl mx-auto">
+            <div className="w-full bg-white/30 rounded-full h-2.5 mb-4">
+                <motion.div 
+                    className="bg-gradient-to-r from-cyan-500 to-teal-500 h-2.5 rounded-full"
+                    animate={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                />
+            </div>
+             <div className="space-y-2 mb-4 max-h-48 overflow-y-auto p-1">
+                {questions.slice(0, currentStep).map((q, index) => (
+                    <motion.button
+                        key={q.id}
+                        onClick={() => setCurrentStep(index)}
+                        className="w-full text-left p-3 bg-white/60 rounded-lg flex justify-between items-center hover:bg-white transition shadow"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                    >
+                        <span className="font-medium text-gray-700 text-sm truncate pr-4">{q.text}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-teal-600 bg-teal-100 px-2 py-1 rounded-full">EDIT</span>
+                            <CheckCircle className="text-green-500 flex-shrink-0" size={20} />
+                        </div>
+                    </motion.button>
+                ))}
+            </div>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={currentStep}
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -50 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <QuestionCard 
+                        question={currentQuestion}
+                        answer={answers[currentQuestion.id]}
+                        onChange={(answer) => handleAnswer(currentQuestion.id, answer)}
+                        onNext={handleNext}
+                        onBack={handleBack}
+                        isFirst={currentStep === 0}
+                        isLast={currentStep === questions.length - 1}
+                    />
+                </motion.div>
+            </AnimatePresence>
+        </div>
+    );
+};
+
+// --- RESULTS DISPLAY ---
+
+const ProgressRing = ({ percentage, color, size = 120 }) => {
+    const radius = (size / 2) - 10;
+    const circumference = 2 * Math.PI * radius;
+
+    return (
+        <div className="relative" style={{ width: size, height: size }}>
+            <svg className="w-full h-full" viewBox={`0 0 ${size} ${size}`}>
+                <circle className="text-gray-200/50" strokeWidth="8" stroke="currentColor" fill="transparent" r={radius} cx={size/2} cy={size/2} />
+                <motion.circle
+                    className={`text-${color}-500`}
+                    strokeWidth="8"
+                    strokeDasharray={circumference}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r={radius}
+                    cx={size/2}
+                    cy={size/2}
+                    style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
+                    initial={{ strokeDashoffset: circumference }}
+                    animate={{ strokeDashoffset: circumference - (percentage / 100) * circumference }}
+                    transition={{ duration: 1.5, ease: 'circOut' }}
+                />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+                <span className={`text-2xl font-bold text-${color}-600`}>{Math.round(percentage)}%</span>
+            </div>
+        </div>
+    );
+};
+
+const ResultsScreen = ({ results, module, onReset }) => {
+    const { diagnoses, risk, confidence } = results;
+    const riskLevel = risk.score > 12 ? 'Critical' : risk.score > 8 ? 'High' : risk.score > 4 ? 'Elevated' : 'Guarded';
+    const riskColor = { Critical: 'red', High: 'orange', Elevated: 'yellow', Guarded: 'green'}[riskLevel];
+    const season = getSeason();
+    
+    return (
+        <div className="w-full max-w-4xl mx-auto space-y-6">
+            <GlassmorphismCard className="p-8 text-center">
+                <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center bg-${riskColor}-100 border-4 border-${riskColor}-200 mb-4`}>
+                    <AlertTriangle size={40} className={`text-${riskColor}-500`} />
+                </div>
+                <h2 className="text-3xl font-bold text-gray-800">Assessment Complete</h2>
+                <p className={`text-xl font-semibold text-${riskColor}-600`}>Overall Risk: {riskLevel}</p>
+                 {risk.score > 8 && (
+                    <div className="mt-4 p-4 bg-red-100/70 border border-red-200 rounded-lg text-red-800">
+                        <h4 className="font-bold">Time-Critical Information</h4>
+                        <p>Based on your symptoms, seeking prompt medical evaluation is strongly recommended. For severe symptoms, this could be a "golden hour" where immediate action is vital.</p>
+                    </div>
+                )}
+            </GlassmorphismCard>
+            
+            {/* Differential Diagnosis */}
+            <GlassmorphismCard className="p-8">
+                <h3 className="text-2xl font-semibold text-gray-800 mb-6">Differential Diagnosis</h3>
+                <div className="grid md:grid-cols-3 gap-6 text-center">
+                    {diagnoses.map((diag, i) => (
+                        <div key={diag.name} className={`p-4 rounded-xl bg-white/60 ${i===0 ? 'border-2 border-teal-400' : ''}`}>
+                             <ProgressRing percentage={diag.probability} color={i === 0 ? 'teal' : i === 1 ? 'cyan' : 'gray'} size={100} />
+                             <h4 className="font-bold text-lg mt-3">{diag.name}</h4>
+                             <p className="text-sm text-gray-600">{diag.urgency} urgency</p>
+                        </div>
+                    ))}
+                    {diagnoses.length === 0 && <p className="text-gray-600 col-span-3">Could not determine likely conditions based on provided symptoms.</p>}
+                </div>
+            </GlassmorphismCard>
+
+            {/* Smart Insights Grid */}
+            <div className="grid md:grid-cols-2 gap-6">
+                <GlassmorphismCard className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                        <ShieldCheck className="text-blue-500" size={28}/>
+                        <h4 className="text-xl font-semibold text-gray-800">Confidence Score</h4>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <ProgressRing percentage={confidence} color="blue" size={80} />
+                        <p className="text-gray-700 flex-1">Our assessment is {confidence}% confident based on the specificity and completeness of your answers.</p>
+                    </div>
+                </GlassmorphismCard>
+                <GlassmorphismCard className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                        <BrainCircuit className="text-green-500" size={28}/>
+                        <h4 className="text-xl font-semibold text-gray-800">Pattern Recognition</h4>
+                    </div>
+                    {diagnoses[0] && <p className="text-gray-700">The combination of <b>{diagnoses[0].matchedCriteria.slice(0,2).join(', ')}</b> strongly suggests <b>{diagnoses[0].name}</b>.</p>}
+                     {!diagnoses[0] && <p className="text-gray-700">No strong symptom patterns were detected.</p>}
+                </GlassmorphismCard>
+                <GlassmorphismCard className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                        <BarChart2 className="text-yellow-500" size={28}/>
+                        <h4 className="text-xl font-semibold text-gray-800">Common Causes</h4>
+                    </div>
+                    {diagnoses[0] && <p className="text-gray-700">{diagnoses[0].name} is a <b>{diagnoses[0].prevalence.toLowerCase()}</b></p>}
+                     {!diagnoses[0] && <p className="text-gray-700">Statistical data not available.</p>}
+                </GlassmorphismCard>
+                 <GlassmorphismCard className="p-6">
+                    <div className="flex items-center gap-3 mb-3">
+                        {(season === 'winter' || season === 'autumn') ? <Wind className="text-teal-500" size={28}/> : <Sun className="text-orange-500" size={28}/>}
+                        <h4 className="text-xl font-semibold text-gray-800">Seasonal & Age Insights</h4>
+                    </div>
+                    {diagnoses.map(d => d.seasonal.includes(season) ? <p key={d.name} className="text-sm text-gray-700">Note: {d.name} can be more common in the {season}.</p> : null).find(el => el) || <p className="text-gray-700">No specific seasonal or age-related patterns detected for your top conditions.</p>}
+                </GlassmorphismCard>
+            </div>
+            
+            <div className="text-center">
+                 <button onClick={onReset} className="px-8 py-3 bg-white/80 font-semibold text-gray-800 rounded-lg shadow-md hover:bg-white transition">Start New Assessment</button>
+            </div>
+        </div>
+    );
+};
+
+
+// --- MAIN APP COMPONENT ---
+
+export default function SymptoSphere() {
+  const [appState, setAppState] = useState('disclaimer'); // disclaimer, selector, questionnaire, results
+  const [selectedSymptom, setSelectedSymptom] = useState(null);
+  const [results, setResults] = useState(null);
+
+  const activeModule = symptomModules[selectedSymptom];
+
+  const handleSymptomSelect = (symptom) => {
+    setSelectedSymptom(symptom);
+    setAppState('questionnaire');
+  };
   
+  const handleAssessmentComplete = (answers) => {
+    const analysis = analysisEngine(answers, activeModule);
+    setResults(analysis);
+    setAppState('results');
+  };
+
+  const handleReset = () => {
+      setAppState('selector');
+      setSelectedSymptom(null);
+      setResults(null);
+  };
+
+  const renderContent = () => {
+    switch(appState) {
+        case 'selector':
+            return <SymptomSelector onSelect={handleSymptomSelect} />;
+        case 'questionnaire':
+            return <Questionnaire module={activeModule} onComplete={handleAssessmentComplete} />;
+        case 'results':
+            return <ResultsScreen results={results} module={activeModule} onReset={handleReset} />;
+        default:
+            return null;
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Chest Pain Assessment</h1>
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600">Answer all questions for accurate evaluation</p>
-            <span className="text-sm font-medium text-indigo-600">
-              {Object.keys(answers).length} of {questions.length} completed
-            </span>
-          </div>
-          {/* Progress bar */}
-          <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="h-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-500"
-              style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
-            />
-          </div>
-        </div>
-        
-        {/* Questions - Vertical Stack */}
-        <div className="space-y-6">
-          {questions.map((question, index) => (
-            <QuestionCard
-              key={question.id}
-              question={question}
-              answer={answers[question.id]}
-              onChange={(answer) => handleAnswerChange(question.id, answer)}
-              onComplete={() => handleQuestionComplete(index)}
-              index={index}
-              isActive={currentQuestion === index}
-              onEdit={() => handleEditQuestion(index)}
-            />
-          ))}
-        </div>
-        
-        {/* Submit Button */}
-        {Object.keys(answers).length === questions.length && (
-          <div className="mt-8 text-center">
-            <button
-              onClick={processResults}
-              className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-lg hover:from-indigo-700 hover:to-purple-700 transition shadow-lg"
-            >
-              Get Your Assessment Results
-            </button>
-          </div>
-        )}
-        
-        {/* Emergency Notice */}
-        <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg sticky bottom-4">
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <p className="text-sm text-red-700">
-              If you're experiencing severe symptoms or this is an emergency, stop this assessment and call 911 immediately.
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      <style jsx>{`
-        .slider::-webkit-slider-thumb {
-          appearance: none;
-          width: 24px;
-          height: 24px;
-          background: #4f46e5;
-          border-radius: 50%;
-          cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .slider::-moz-range-thumb {
-          width: 24px;
-          height: 24px;
-          background: #4f46e5;
-          border-radius: 50%;
-          cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          border: none;
-        }
-        
-        .slider:disabled::-webkit-slider-thumb {
-          background: #9ca3af;
-          cursor: not-allowed;
-        }
-        
-        .slider:disabled::-moz-range-thumb {
-          background: #9ca3af;
-          cursor: not-allowed;
-        }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-blue-100 to-teal-100 p-4 sm:p-8 flex items-center justify-center font-sans">
+      <AnimatePresence mode="wait">
+        {appState === 'disclaimer' && <DisclaimerModal onAccept={() => setAppState('selector')} />}
+      </AnimatePresence>
+      <AnimatePresence mode="wait">
+        <motion.div 
+            key={appState}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.5 }}
+            className="w-full"
+        >
+            {renderContent()}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
 
-// Helper function to generate report
-function generateReport(answers, score, factors, urgencyLevel, diagnoses) {
-  const timestamp = new Date().toLocaleString();
-  return {
-    timestamp,
-    urgencyLevel,
-    riskScore: score,
-    riskFactors: factors,
-    topDiagnoses: diagnoses.map(d => ({
-      condition: d.name,
-      probability: `${Math.round(d.probability)}%`,
-      category: d.category,
-      recommendedAction: d.action
-    })),
-    responses: answers,
-    recommendation: urgencyLevel === 'critical' ? 'IMMEDIATE EMERGENCY CARE REQUIRED' :
-                    urgencyLevel === 'high' ? 'Visit Emergency Room' :
-                    urgencyLevel === 'moderate' ? 'See Doctor Today' :
-                    'Monitor and Schedule Appointment if Needed'
-  };
-}
